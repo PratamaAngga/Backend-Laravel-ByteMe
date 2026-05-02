@@ -49,6 +49,7 @@ class ProdukController extends Controller
             'deskripsi'   => 'required|string',
             'harga'       => 'required|numeric|min:0',
             'file'        => 'required|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
+            'access_url'  => 'required|varchar|max:255',
         ]);
 
         $user = $request->user();
@@ -78,6 +79,7 @@ class ProdukController extends Controller
             'status'      => 'pending',
             'file_path'   => $uploadedUrl,
             'file_bucket' => config('services.supabase.bucket'),
+            'access_url'  => $request->access_url,
         ]);
 
         return response()->json([
@@ -102,6 +104,7 @@ class ProdukController extends Controller
             'deskripsi'   => 'sometimes|string',
             'harga'       => 'sometimes|numeric|min:0',
             'file'        => 'sometimes|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
+            'access_url'  => 'sometimes|varchar|max:255',
         ]);
 
         // Kalau ada file baru, upload dan hapus yang lama
@@ -124,7 +127,7 @@ class ProdukController extends Controller
             $produk->file_path = $uploadedUrl;
         }
 
-        $produk->fill($request->only(['nama_produk', 'deskripsi', 'harga']));
+        $produk->fill($request->only(['nama_produk', 'deskripsi', 'harga', 'access_url']));
         $produk->status = 'pending'; // reset ke pending kalau diedit
         $produk->save();
 
