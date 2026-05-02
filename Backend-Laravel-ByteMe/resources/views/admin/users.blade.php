@@ -28,15 +28,17 @@
                     </span>
                 </td>
                 <td>
-                    @if($user->is_banned)
-                        <span class="badge bg-danger">Banned</span>
-                    @else
-                        <span class="badge bg-success">Active</span>
-                    @endif
+                    <span class="badge bg-{{ 
+                        $user->status === 'banned' ? 'danger' : 
+                        ($user->status === 'suspended' ? 'warning' : 
+                        ($user->status === 'warning' ? 'warning' : 'success'))
+                    }}">
+                        {{ ucfirst($user->status) }}
+                    </span>
                 </td>
                 <td>{{ $user->created_at->format('d/m/Y') }}</td>
                 <td>
-                    @if(!$user->is_banned)
+                    @if($user->status !== 'banned')
                         <form action="{{ route('admin.users.ban', $user->id) }}" method="POST" class="d-inline">
                             @csrf
                             @method('PATCH')
