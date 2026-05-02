@@ -16,4 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
+    })
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->statefulApi();
+        $middleware->alias([
+            'is_admin' => \App\Http\Middleware\IsAdmin::class,
+        ]);
     })->create();
