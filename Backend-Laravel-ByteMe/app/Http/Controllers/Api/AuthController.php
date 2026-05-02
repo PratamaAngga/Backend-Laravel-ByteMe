@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -75,6 +76,13 @@ class AuthController extends Controller
             ], $httpCode);
         }
 
+        // Cek apakah akun di-ban atau suspended
+        if (in_array($user->status, ['banned', 'suspended'])) {
+            return response()->json([
+                'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -96,5 +104,46 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    // Edit profile (tidak boleh ubah role)
+    public function update(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'username' => [
+                'sometimes',
+                'string',
+                'max:255',
+                Rule::unique('profiles')->ignore($user->id, 'id'),
+            ],
+            'email' => [
+                'sometimes',
+                'email',
+                Rule::unique('profiles')->ignore($user->id, 'id'),
+            ],
+            'password'              => 'sometimes|min:8|confirmed',
+            'password_confirmation' => 'required_with:password',
+        ]);
+
+        if ($request->filled('username')) {
+            $user->username = $request->username;
+        }
+
+        if ($request->filled('email')) {
+            $user->email = $request->email;
+        }
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user'    => $user,
+        ]);
     }
 }
