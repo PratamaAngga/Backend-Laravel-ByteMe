@@ -39,15 +39,18 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string',
             'password' => 'required',
+            'role'     => 'required|in:buyer,seller',  // ← TAMBAHKAN
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('username', $request->username)
+            ->where('role', $request->role)      // ← TAMBAHKAN filter role
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Email atau password salah',
+                'message' => 'Username, password, atau role salah',
             ], 401);
         }
 
