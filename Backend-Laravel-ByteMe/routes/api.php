@@ -5,12 +5,16 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\AdminProdukController;
 use App\Http\Controllers\Api\KeranjangController;
+use App\Http\Controllers\Api\PesananController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login',    [AuthController::class, 'login']);
 });
+
+// Webhook Midtrans (public, tidak perlu token)
+Route::post('/webhook/midtrans', [PesananController::class, 'webhook']);
 
 // Protected routes (butuh token)
 Route::middleware('auth:sanctum')->group(function () {
@@ -27,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/keranjang', [KeranjangController::class, 'index']);
     Route::post('/keranjang', [KeranjangController::class, 'store']);
     Route::delete('/keranjang/{detailId}', [KeranjangController::class, 'destroy']);
+    Route::post('/checkout', [PesananController::class, 'checkout']);
+    Route::get('/pesanan', [PesananController::class, 'index']);
+    Route::get('/pesanan/{id}', [PesananController::class, 'show']);
 });
 
 // Admin routes

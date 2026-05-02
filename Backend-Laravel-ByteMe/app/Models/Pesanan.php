@@ -15,4 +15,19 @@ class Pesanan extends Model
         'pesanan_id', 'user_id', 'tgl_pesanan',
         'total_harga', 'status',
     ];
+
+    public function detailPesanan()
+    {
+        return $this->hasMany(DetailPesanan::class, 'pesanan_id', 'pesanan_id');
+    }
+
+    public function pembayaran()
+    {
+        return $this->hasOne(Pembayaran::class, 'pesanan_id', 'pesanan_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }

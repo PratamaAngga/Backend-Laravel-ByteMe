@@ -16,4 +16,9 @@ class DetailPesanan extends Model
         'detail_pesanan_id', 'pesanan_id',
         'produk_id', 'jumlah', 'harga_satuan', 'subtotal',
     ];
+
+    public function produk()
+    {
+        return $this->belongsTo(Produk::class, 'produk_id', 'produk_id');
+    }
 }
