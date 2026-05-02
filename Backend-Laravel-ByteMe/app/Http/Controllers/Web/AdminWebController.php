@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Produk;
 use App\Models\User;
 use App\Models\WithdrawRequest;
-use Illuminate\Database\Schema\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 
 class AdminWebController extends Controller
 {
@@ -53,9 +51,7 @@ class AdminWebController extends Controller
             'total_produk' => Produk::count(),
             'produk_pending' => Produk::where('status', 'pending')->count(),
             'total_users' => User::count(),
-            'users_banned' => Schema::hasColumn('profiles', 'is_banned')
-                ? User::where('is_banned', true)->count()
-                : 0,
+            'users_banned' => User::where('status', 'banned')->count(),
             'withdraw_pending' => WithdrawRequest::where('status', 'pending')->count(),
         ];
 
@@ -101,12 +97,8 @@ class AdminWebController extends Controller
     // Ban user
     public function banUser($id)
     {
-        if (! Schema::hasColumn('profiles', 'is_banned')) {
-            return back()->withErrors(['error' => 'Kolom is_banned belum tersedia. Jalankan migrasi terlebih dahulu.']);
-        }
-
         $user = User::findOrFail($id);
-        $user->is_banned = true;
+        $user->status = 'banned';
         $user->save();
 
         return back()->with('success', 'User berhasil diban');
@@ -115,12 +107,8 @@ class AdminWebController extends Controller
     // Unban user
     public function unbanUser($id)
     {
-        if (! Schema::hasColumn('profiles', 'is_banned')) {
-            return back()->withErrors(['error' => 'Kolom is_banned belum tersedia. Jalankan migrasi terlebih dahulu.']);
-        }
-
         $user = User::findOrFail($id);
-        $user->is_banned = false;
+        $user->status = 'active';
         $user->save();
 
         return back()->with('success', 'User berhasil diunban');

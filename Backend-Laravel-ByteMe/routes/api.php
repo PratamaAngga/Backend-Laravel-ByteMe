@@ -18,10 +18,6 @@ Route::prefix('auth')->middleware('cors')->group(function () {
 
 // Webhook Midtrans (public, tidak perlu token)
 Route::post('/webhook/midtrans', [PesananController::class, 'webhook']);
-
-// Webhook Midtrans (public, tidak perlu token)
-Route::post('/webhook/midtrans', [PesananController::class, 'webhook']);
-
 // ─── Protected routes (perlu token + cek banned) ──────────────────────────────
 Route::middleware(['auth:sanctum', 'check_not_banned', 'cors'])->group(function () {
 
@@ -44,6 +40,9 @@ Route::middleware(['auth:sanctum', 'check_not_banned', 'cors'])->group(function 
     Route::get('/keranjang',                    [KeranjangController::class, 'index']);
     Route::post('/keranjang',                   [KeranjangController::class, 'store']);
     Route::delete('/keranjang/{detailId}',      [KeranjangController::class, 'destroy']);
+    Route::post('/checkout', [PesananController::class, 'checkout']);
+    Route::get('/pesanan', [PesananController::class, 'index']);
+    Route::get('/pesanan/{id}', [PesananController::class, 'show']);
 
     // Withdraw (khusus seller)
     Route::get('/withdraws',        [WithdrawController::class, 'index']);

@@ -76,8 +76,8 @@ class AuthController extends Controller
             ], $httpCode);
         }
 
-        // Cek apakah akun di-ban
-        if ($user->is_banned) {
+        // Cek apakah akun di-ban atau suspended
+        if (in_array($user->status, ['banned', 'suspended'])) {
             return response()->json([
                 'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
             ], 403);
