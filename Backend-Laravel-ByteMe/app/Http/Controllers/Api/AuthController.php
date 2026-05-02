@@ -40,16 +40,40 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string',
             'password' => 'required',
+            'role'     => 'required|in:buyer,seller',  // ← TAMBAHKAN
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('username', $request->username)
+            ->where('role', $request->role)      // ← TAMBAHKAN filter role
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Email atau password salah',
+                'message' => 'Username, password, atau role salah',
             ], 401);
+        }
+
+        $statusMessages = [
+            'warning'   => 'Akun kamu sedang dalam status peringatan. Harap perhatikan ketentuan penggunaan.',
+            'suspended' => 'Akun kamu sedang disuspend sementara. Hubungi admin untuk informasi lebih lanjut.',
+            'banned'    => 'Akun kamu telah dibanned secara permanen. Hubungi admin jika ada keberatan.',
+        ];
+
+        if (array_key_exists($user->status, $statusMessages)) {
+            $httpCode = $user->status === 'warning' ? 200 : 403;
+
+            $token = null;
+            if ($user->status === 'warning') {
+                $token = $user->createToken('auth_token')->plainTextToken;
+            }
+
+            return response()->json([
+                'message' => $statusMessages[$user->status],
+                'status'  => $user->status,
+                'token'   => $token,
+            ], $httpCode);
         }
 
         // Cek apakah akun di-ban
