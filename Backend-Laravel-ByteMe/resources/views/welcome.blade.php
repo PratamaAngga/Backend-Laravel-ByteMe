@@ -45,6 +45,14 @@
                                 Register
                             </a>
                         @endif
+
+                        <!-- Link ke Admin Login -->
+                        <a
+                            href="{{ route('admin.login') }}"
+                            class="inline-block px-5 py-1.5 bg-red-500 text-white border border-red-500 hover:bg-red-600 rounded-sm text-sm leading-normal"
+                        >
+                            Admin Login
+                        </a>
                     @endauth
                 </nav>
             @endif

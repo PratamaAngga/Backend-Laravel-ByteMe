@@ -21,5 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->alias([
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'cors' => \App\Http\Middleware\Cors::class,
         ]);
     })->create();
