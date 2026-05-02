@@ -5,21 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class AdminUserController extends Controller
 {
     // List semua user (bukan admin)
     public function index()
     {
-        $columns = ['id', 'username', 'email', 'role', 'created_at'];
-        if (Schema::hasColumn('profiles', 'is_banned')) {
-            $columns[] = 'is_banned';
-        }
-
         $users = User::where('role', '!=', 'admin')
             ->latest()
-            ->get($columns);
+            ->get(['id', 'username', 'email', 'role', 'status', 'created_at']);
 
         return response()->json($users);
     }
@@ -27,14 +21,9 @@ class AdminUserController extends Controller
     // Detail satu user
     public function show(string $id)
     {
-        $columns = ['id', 'username', 'email', 'role', 'created_at'];
-        if (Schema::hasColumn('profiles', 'is_banned')) {
-            $columns[] = 'is_banned';
-        }
-
         $user = User::where('id', $id)
             ->where('role', '!=', 'admin')
-            ->first($columns);
+            ->first(['id', 'username', 'email', 'role', 'status', 'created_at']);
 
         if (!$user) {
             return response()->json(['message' => 'User tidak ditemukan'], 404);
@@ -54,11 +43,11 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
 
-        if ($user->is_banned) {
+        if ($user->status === 'banned') {
             return response()->json(['message' => 'User sudah dalam status banned'], 409);
         }
 
-        $user->is_banned = true;
+        $user->status = 'banned';
         $user->save();
 
         // Hapus semua token aktif user agar langsung logout
@@ -66,7 +55,7 @@ class AdminUserController extends Controller
 
         return response()->json([
             'message' => 'Akun user berhasil dibanned',
-            'user'    => $user->only(['id', 'username', 'email', 'role', 'is_banned']),
+            'user'    => $user->only(['id', 'username', 'email', 'role', 'status']),
         ]);
     }
 
@@ -81,16 +70,16 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
 
-        if (!$user->is_banned) {
+        if ($user->status !== 'banned') {
             return response()->json(['message' => 'User tidak dalam status banned'], 409);
         }
 
-        $user->is_banned = false;
+        $user->status = 'active';
         $user->save();
 
         return response()->json([
             'message' => 'Akun user berhasil di-unban',
-            'user'    => $user->only(['id', 'username', 'email', 'role', 'is_banned']),
+            'user'    => $user->only(['id', 'username', 'email', 'role', 'status']),
         ]);
     }
 }

@@ -10,7 +10,7 @@ class CheckNotBanned
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && $request->user()->is_banned) {
+        if ($request->user() && in_array($request->user()->status, ['banned', 'suspended'])) {
             return response()->json([
                 'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
             ], 403);
