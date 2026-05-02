@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\AdminProdukController;
+use App\Http\Controllers\Api\KeranjangController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
@@ -23,6 +24,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/produk/{id}', [ProdukController::class, 'update']);
     Route::delete('/produk/{id}', [ProdukController::class, 'destroy']);
     Route::get('/my-produk', [ProdukController::class, 'myProduk']);
+    Route::get('/keranjang', [KeranjangController::class, 'index']);
+    Route::post('/keranjang', [KeranjangController::class, 'store']);
+    Route::delete('/keranjang/{detailId}', [KeranjangController::class, 'destroy']);
 });
 
 // Admin routes
