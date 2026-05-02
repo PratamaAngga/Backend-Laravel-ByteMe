@@ -2,26 +2,21 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'profiles'; // arahkan ke tabel profiles
+    protected $table      = 'profiles';
     protected $primaryKey = 'id';
-    public $incrementing = false;  // karena UUID, bukan auto-increment
-    protected $keyType = 'string'; // UUID = string
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
         'id',
@@ -30,10 +25,16 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'is_banned',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    protected $casts = [
+        'is_banned'         => 'boolean',
+        'email_verified_at' => 'datetime',
     ];
 }
