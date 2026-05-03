@@ -49,7 +49,7 @@ class ProdukController extends Controller
             'deskripsi'   => 'required|string',
             'harga'       => 'required|numeric|min:0',
             'file'        => 'required|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
-            'access_url'  => 'required|varchar|max:255',
+            'access_url'  => 'required|string',
         ]);
 
         $user = $request->user();
