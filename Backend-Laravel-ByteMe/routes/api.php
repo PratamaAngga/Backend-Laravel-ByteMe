@@ -19,7 +19,7 @@ Route::prefix('auth')->middleware('cors')->group(function () {
 // Webhook Midtrans (public, tidak perlu token)
 Route::post('/webhook/midtrans', [PesananController::class, 'webhook']);
 // ─── Protected routes (perlu token + cek banned) ──────────────────────────────
-Route::middleware(['auth:sanctum', 'check_not_banned', 'cors'])->group(function () {
+Route::middleware(['auth:sanctum', 'cors'])->group(function () {
 
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);

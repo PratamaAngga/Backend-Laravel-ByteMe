@@ -14,6 +14,6 @@ class Produk extends Model
     protected $fillable = [
         'produk_id', 'user_id', 'nama_produk',
         'deskripsi', 'harga', 'status',
-        'file_path', 'file_bucket',
+        'file_path', 'file_bucket', 'access_url'
     ];
 }

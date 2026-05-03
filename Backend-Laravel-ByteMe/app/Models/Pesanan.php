@@ -10,6 +10,7 @@ class Pesanan extends Model
     protected $primaryKey = 'pesanan_id';
     public $incrementing = false;
     protected $keyType = 'string';
+    public $timestamps = false;
 
     protected $fillable = [
         'pesanan_id', 'user_id', 'tgl_pesanan',

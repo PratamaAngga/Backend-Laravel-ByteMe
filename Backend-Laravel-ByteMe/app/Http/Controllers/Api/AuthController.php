@@ -42,7 +42,7 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string',
             'password' => 'required',
-            'role'     => 'required|in:buyer,seller',  // ← TAMBAHKAN
+            'role'     => 'required|in:buyer,seller,admin',  // ← TAMBAHKAN
         ]);
 
         $user = User::where('username', $request->username)

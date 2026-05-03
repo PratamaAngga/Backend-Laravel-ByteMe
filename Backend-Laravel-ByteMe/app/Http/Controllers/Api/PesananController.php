@@ -190,8 +190,8 @@ class PesananController extends Controller
         // Update status pembayaran
         $pembayaran = Pembayaran::where('pesanan_id', $orderId)->first();
         if ($pembayaran) {
-            $pembayaran->status  = $pesanan->status === 'paid' ? 'success' : $transactionStatus;
-            $pembayaran->metode  = $request->payment_type ?? 'midtrans';
+            $pembayaran->status   = $pesanan->status === 'paid' ? 'success' : $transactionStatus;
+            $pembayaran->metode   = $request->payment_type ?? 'midtrans';
             $pembayaran->tgl_bayar = now();
             $pembayaran->save();
         }
