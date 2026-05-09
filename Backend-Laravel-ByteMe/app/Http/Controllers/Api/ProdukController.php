@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Kategori;
 use App\Models\Produk;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ class ProdukController extends Controller
     // List semua produk yang sudah approved (untuk marketplace)
     public function index()
     {
-        $produk = Produk::where('status', 'approved')
+        $produk = Produk::with('categories')
+            ->where('status', 'approved')
             ->latest()
             ->get();
 
@@ -30,7 +32,8 @@ class ProdukController extends Controller
     // Detail satu produk
     public function show(string $id)
     {
-        $produk = Produk::where('produk_id', $id)
+        $produk = Produk::with('categories')
+            ->where('produk_id', $id)
             ->where('status', 'approved')
             ->first();
 
@@ -50,6 +53,10 @@ class ProdukController extends Controller
             'harga'       => 'required|numeric|min:0',
             'file'        => 'required|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
             'access_url'  => 'required|string',
+            'kategori_ids' => 'sometimes|array',
+            'kategori_ids.*' => 'string|exists:kategori,id',
+            'kategori' => 'sometimes|array',
+            'kategori.*' => 'string|exists:kategori,id',
         ]);
 
         $user = $request->user();
@@ -82,6 +89,13 @@ class ProdukController extends Controller
             'access_url'  => $request->access_url,
         ]);
 
+        $kategoriIds = $request->input('kategori_ids', $request->input('kategori', []));
+        if (!empty($kategoriIds)) {
+            $produk->categories()->sync($kategoriIds);
+        }
+
+        $produk->load('categories');
+
         return response()->json([
             'message' => 'Produk berhasil diupload, menunggu persetujuan admin',
             'produk'  => $produk,
@@ -105,6 +119,10 @@ class ProdukController extends Controller
             'harga'       => 'sometimes|numeric|min:0',
             'file'        => 'sometimes|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
             'access_url'  => 'sometimes|string|max:255',
+            'kategori_ids' => 'sometimes|array',
+            'kategori_ids.*' => 'string|exists:kategori,id',
+            'kategori' => 'sometimes|array',
+            'kategori.*' => 'string|exists:kategori,id',
         ]);
 
         // Kalau ada file baru, upload dan hapus yang lama
@@ -130,6 +148,13 @@ class ProdukController extends Controller
         $produk->fill($request->only(['nama_produk', 'deskripsi', 'harga', 'access_url']));
         $produk->status = 'pending'; // reset ke pending kalau diedit
         $produk->save();
+
+        if ($request->has('kategori_ids') || $request->has('kategori')) {
+            $kategoriIds = $request->input('kategori_ids', $request->input('kategori', []));
+            $produk->categories()->sync($kategoriIds);
+        }
+
+        $produk->load('categories');
 
         return response()->json([
             'message' => 'Produk berhasil diupdate, menunggu persetujuan ulang admin',
@@ -158,7 +183,8 @@ class ProdukController extends Controller
     // List produk milik seller yang sedang login
     public function myProduk(Request $request)
     {
-        $produk = Produk::where('user_id', $request->user()->id)
+        $produk = Produk::with('categories')
+            ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
 

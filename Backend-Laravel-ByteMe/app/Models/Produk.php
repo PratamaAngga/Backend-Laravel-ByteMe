@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Kategori;
 use Illuminate\Database\Eloquent\Model;
 
 class Produk extends Model
@@ -16,4 +17,9 @@ class Produk extends Model
         'deskripsi', 'harga', 'status',
         'file_path', 'file_bucket', 'access_url'
     ];
+
+    public function categories()
+    {
+        return $this->belongsToMany(Kategori::class, 'kategori_produk', 'produk_id', 'kategori_id');
+    }
 }
