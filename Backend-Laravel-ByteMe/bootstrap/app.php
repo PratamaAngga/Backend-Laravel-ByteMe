@@ -13,14 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
-    })
-    ->withMiddleware(function (Middleware $middleware) {
-        $middleware->statefulApi();
         $middleware->alias([
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
             'cors' => \App\Http\Middleware\Cors::class,
         ]);
+    })->withExceptions(function (Exceptions $exceptions): void {
+        //
     })->create();

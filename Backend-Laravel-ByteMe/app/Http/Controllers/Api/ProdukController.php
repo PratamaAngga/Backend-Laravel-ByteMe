@@ -104,7 +104,7 @@ class ProdukController extends Controller
             'deskripsi'   => 'sometimes|string',
             'harga'       => 'sometimes|numeric|min:0',
             'file'        => 'sometimes|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
-            'access_url'  => 'sometimes|varchar|max:255',
+            'access_url'  => 'sometimes|string|max:255',
         ]);
 
         // Kalau ada file baru, upload dan hapus yang lama
