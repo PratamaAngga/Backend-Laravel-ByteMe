@@ -22,14 +22,14 @@ class AdminWebController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'username' => 'required',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('username', $request->username)->first();
 
         if (!$user || !Hash::check($request->password, $user->password) || $user->role !== 'admin') {
-            return back()->withErrors(['email' => 'Email, password salah atau bukan admin']);
+            return back()->withErrors(['username' => 'Username, password salah atau bukan admin']);
         }
 
         Auth::login($user);

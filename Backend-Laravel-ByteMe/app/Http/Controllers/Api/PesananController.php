@@ -11,8 +11,11 @@ use App\Models\Pesanan;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Mail\ProdukAccessMail;
+use App\Models\EmailLog;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class PesananController extends Controller
 {
@@ -211,7 +214,41 @@ class PesananController extends Controller
             ->with('produk')
             ->get();
 
-        // Nanti kita buat Mailable-nya tersendiri
-        // Mail::to($user->email)->send(new ProdukAccessMail($user, $detailPesanan));
+        foreach ($detailPesanan as $detail) {
+            $produk = $detail->produk;
+
+            try {
+                Mail::to($user->email)->send(new ProdukAccessMail(
+                    username:   $user->username,
+                    namaProduk: $produk->nama_produk,
+                    linkAkses:  $produk->access_url,
+                    pesananId:  $pesanan->pesanan_id,
+                ));
+
+                // Catat berhasil
+                EmailLog::create([
+                    'email_log_id' => \Illuminate\Support\Str::uuid(),
+                    'pesanan_id'   => $pesanan->pesanan_id,
+                    'user_id'      => $user->id,
+                    'recipient_email' => $user->email,
+                    'status'       => 'sent',
+                    'sent_at'      => now(),
+                ]);
+
+            } catch (\Exception $e) {
+                // Catat gagal
+                EmailLog::create([
+                    'email_log_id'  => \Illuminate\Support\Str::uuid(),
+                    'pesanan_id'    => $pesanan->pesanan_id,
+                    'user_id'       => $user->id,
+                    'recipient_email'  => $user->email,
+                    'status'        => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'sent_at'       => now(),
+                ]);
+
+                Log::error('Failed to send product access email: ' . $e->getMessage());
+            }
+        }
     }
 }

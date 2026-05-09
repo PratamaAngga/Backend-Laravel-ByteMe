@@ -71,4 +71,9 @@ Route::middleware(['auth:sanctum', 'is_admin', 'cors'])->prefix('admin')->group(
     Route::get('/withdraws/pending',            [AdminWithdrawController::class, 'pendingList']);
     Route::patch('/withdraws/{id}/approve',     [AdminWithdrawController::class, 'approve']);
     Route::patch('/withdraws/{id}/reject',      [AdminWithdrawController::class, 'reject']);
+    Route::get('/email-log', function() {
+        return response()->json(
+            \App\Models\EmailLog::latest('sent_at')->get()
+        );
+    });
 });
