@@ -26,77 +26,91 @@ class PesananController extends Controller
         $this->midtrans = $midtrans;
     }
 
-    // Checkout satu item dari keranjang
+    // Checkout satu atau banyak item dari keranjang
     public function checkout(Request $request)
     {
         $request->validate([
-            'detail_keranjang_id' => 'required|uuid',
+            'detail_keranjang_id'    => 'required_without:detail_keranjang_ids|uuid',
+            'detail_keranjang_ids'   => 'required_without:detail_keranjang_id|array|min:1',
+            'detail_keranjang_ids.*' => 'uuid',
         ]);
 
         $user = $request->user();
 
-        // Ambil item dari keranjang
         $keranjang = Keranjang::where('user_id', $user->id)->first();
 
         if (!$keranjang) {
             return response()->json(['message' => 'Keranjang tidak ditemukan'], 404);
         }
 
-        $item = DetailKeranjang::where('detail_keranjang_id', $request->detail_keranjang_id)
+        $detailIds = $request->input('detail_keranjang_ids', []);
+        if ($request->filled('detail_keranjang_id')) {
+            $detailIds[] = $request->detail_keranjang_id;
+        }
+
+        $detailIds = array_values(array_unique($detailIds));
+
+        $items = DetailKeranjang::whereIn('detail_keranjang_id', $detailIds)
             ->where('keranjang_id', $keranjang->keranjang_id)
             ->with('produk')
-            ->first();
+            ->get();
 
-        if (!$item) {
-            return response()->json(['message' => 'Item tidak ditemukan di keranjang'], 404);
+        if ($items->count() !== count($detailIds)) {
+            return response()->json(['message' => 'Satu atau lebih item tidak ditemukan di keranjang'], 404);
         }
 
         DB::beginTransaction();
 
         try {
-            // Buat pesanan
             $pesananId = Str::uuid();
+            $totalHarga = 0;
+            $itemDetails = [];
+
+            foreach ($items as $item) {
+                $jumlah = $item->jumlah ?? 1;
+                $subtotal = $item->harga_satuan * $jumlah;
+                $totalHarga += $subtotal;
+
+                DetailPesanan::create([
+                    'detail_pesanan_id' => Str::uuid(),
+                    'pesanan_id'        => $pesananId,
+                    'produk_id'         => $item->produk_id,
+                    'jumlah'            => $jumlah,
+                    'harga_satuan'      => $item->harga_satuan,
+                    'subtotal'          => $subtotal,
+                ]);
+
+                $itemDetails[] = [
+                    'id'       => $item->produk_id,
+                    'price'    => (int) $item->harga_satuan,
+                    'quantity' => (int) $jumlah,
+                    'name'     => $item->produk->nama_produk,
+                ];
+            }
+
             $pesanan = Pesanan::create([
                 'pesanan_id'  => $pesananId,
                 'user_id'     => $user->id,
                 'tgl_pesanan' => now(),
-                'total_harga' => $item->subtotal,
+                'total_harga' => $totalHarga,
                 'status'      => 'pending',
             ]);
 
-            // Buat detail pesanan
-            DetailPesanan::create([
-                'detail_pesanan_id' => Str::uuid(),
-                'pesanan_id'        => $pesananId,
-                'produk_id'         => $item->produk_id,
-                'jumlah'            => 1,
-                'harga_satuan'      => $item->harga_satuan,
-            ]);
-
-            // Buat transaksi Midtrans
             $midtransParams = [
                 'transaction_details' => [
                     'order_id'     => $pesananId,
-                    'gross_amount' => (int) $item->subtotal,
+                    'gross_amount' => (int) $totalHarga,
                 ],
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
                     'phone'      => $user->phone,
                 ],
-                'item_details' => [
-                    [
-                        'id'       => $item->produk_id,
-                        'price'    => (int) $item->harga_satuan,
-                        'quantity' => 1,
-                        'name'     => $item->produk->nama_produk,
-                    ]
-                ],
+                'item_details' => $itemDetails,
             ];
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);
 
-            // Buat record pembayaran
             Pembayaran::create([
                 'pembayaran_id' => Str::uuid(),
                 'pesanan_id'    => $pesananId,
@@ -104,10 +118,10 @@ class PesananController extends Controller
                 'status'        => 'pending',
             ]);
 
-            // Hapus item dari keranjang
-            $item->delete();
+            DetailKeranjang::whereIn('detail_keranjang_id', $detailIds)
+                ->where('keranjang_id', $keranjang->keranjang_id)
+                ->delete();
 
-            // Update total item keranjang
             $totalItem = DetailKeranjang::where('keranjang_id', $keranjang->keranjang_id)->count();
             $keranjang->total_item = $totalItem;
             $keranjang->save();
@@ -124,7 +138,7 @@ class PesananController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Checkout gagal: ' . $e->getMessage()
+                'message' => 'Checkout gagal: ' . $e->getMessage(),
             ], 500);
         }
     }
