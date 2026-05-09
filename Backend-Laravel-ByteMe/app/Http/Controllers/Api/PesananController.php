@@ -82,6 +82,7 @@ class PesananController extends Controller
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
+                    'phone'      => $user->phone,
                 ],
                 'item_details' => [
                     [

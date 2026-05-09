@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Kategori;
 use App\Models\Produk;
 use App\Models\User;
 use App\Models\WithdrawRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AdminWebController extends Controller
 {
@@ -92,6 +94,65 @@ class AdminWebController extends Controller
     {
         $users = User::paginate(10);
         return view('admin.users', compact('users'));
+    }
+
+    // Kategori index
+    public function categories()
+    {
+        $categories = Kategori::latest()->paginate(10);
+        return view('admin.kategori.index', compact('categories'));
+    }
+
+    // Form tambah kategori
+    public function createCategory()
+    {
+        return view('admin.kategori.create');
+    }
+
+    // Store kategori
+    public function storeCategory(Request $request)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255|unique:kategori,nama',
+        ]);
+
+        Kategori::create([
+            'id' => (string) Str::uuid(),
+            'nama' => $request->nama,
+        ]);
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil ditambahkan');
+    }
+
+    // Form edit kategori
+    public function editCategory($id)
+    {
+        $kategori = Kategori::findOrFail($id);
+        return view('admin.kategori.edit', compact('kategori'));
+    }
+
+    // Update kategori
+    public function updateCategory(Request $request, $id)
+    {
+        $kategori = Kategori::findOrFail($id);
+
+        $request->validate([
+            'nama' => 'required|string|max:255|unique:kategori,nama,' . $kategori->id,
+        ]);
+
+        $kategori->nama = $request->nama;
+        $kategori->save();
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil diupdate');
+    }
+
+    // Hapus kategori
+    public function destroyCategory($id)
+    {
+        $kategori = Kategori::findOrFail($id);
+        $kategori->delete();
+
+        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil dihapus');
     }
 
     // Ban user

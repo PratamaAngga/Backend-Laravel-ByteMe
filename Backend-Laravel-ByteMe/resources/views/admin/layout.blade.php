@@ -131,6 +131,9 @@
                     <a class="nav-link {{ request()->routeIs('admin.users') ? 'active' : '' }}" href="{{ route('admin.users') }}">Kelola User</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.categories*') ? 'active' : '' }}" href="{{ route('admin.categories') }}">Kelola Kategori</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.withdraws') ? 'active' : '' }}" href="{{ route('admin.withdraws') }}">Withdraw Request</a>
                 </li>
                 <li class="nav-item">

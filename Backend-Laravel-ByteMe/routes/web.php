@@ -25,6 +25,12 @@ Route::prefix('admin')->group(function () {
         Route::get('/users', [AdminWebController::class, 'users'])->name('admin.users');
         Route::patch('/users/{id}/ban', [AdminWebController::class, 'banUser'])->name('admin.users.ban');
         Route::patch('/users/{id}/unban', [AdminWebController::class, 'unbanUser'])->name('admin.users.unban');
+        Route::get('/categories', [AdminWebController::class, 'categories'])->name('admin.categories');
+        Route::get('/categories/create', [AdminWebController::class, 'createCategory'])->name('admin.categories.create');
+        Route::post('/categories', [AdminWebController::class, 'storeCategory'])->name('admin.categories.store');
+        Route::get('/categories/{id}/edit', [AdminWebController::class, 'editCategory'])->name('admin.categories.edit');
+        Route::patch('/categories/{id}', [AdminWebController::class, 'updateCategory'])->name('admin.categories.update');
+        Route::delete('/categories/{id}', [AdminWebController::class, 'destroyCategory'])->name('admin.categories.destroy');
         Route::get('/withdraws', [AdminWebController::class, 'withdraws'])->name('admin.withdraws');
         Route::patch('/withdraws/{id}/approve', [AdminWebController::class, 'approveWithdraw'])->name('admin.withdraws.approve');
         Route::patch('/withdraws/{id}/reject', [AdminWebController::class, 'rejectWithdraw'])->name('admin.withdraws.reject');

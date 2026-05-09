@@ -16,6 +16,7 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string|max:255|unique:profiles',
             'email'    => 'required|email|unique:profiles',
+            'phone'    => 'sometimes|nullable|string|max:30',
             'password' => 'required|min:8|confirmed',
             'role'     => 'in:buyer,seller',
         ]);
@@ -24,6 +25,7 @@ class AuthController extends Controller
             'id'       => Str::uuid(),
             'username' => $request->username,
             'email'    => $request->email,
+            'phone'    => $request->phone,
             'password' => Hash::make($request->password),
             'role'     => $request->role ?? 'buyer',
         ]);
@@ -123,6 +125,7 @@ class AuthController extends Controller
                 'email',
                 Rule::unique('profiles')->ignore($user->id, 'id'),
             ],
+            'phone'   => 'sometimes|nullable|string|max:30',
             'password'              => 'sometimes|min:8|confirmed',
             'password_confirmation' => 'required_with:password',
         ]);
@@ -133,6 +136,10 @@ class AuthController extends Controller
 
         if ($request->filled('email')) {
             $user->email = $request->email;
+        }
+
+        if ($request->filled('phone')) {
+            $user->phone = $request->phone;
         }
 
         if ($request->filled('password')) {
