@@ -38,13 +38,13 @@
                 </td>
                 <td>{{ $user->created_at->format('d/m/Y') }}</td>
                 <td>
-                    @if($user->status !== 'banned')
+                    @if($user->status !== 'banned' && $user->role !== 'admin')
                         <form action="{{ route('admin.users.ban', $user->id) }}" method="POST" class="d-inline">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="btn btn-danger btn-sm">Ban</button>
                         </form>
-                    @else
+                    @elseif($user->status === 'banned')
                         <form action="{{ route('admin.users.unban', $user->id) }}" method="POST" class="d-inline">
                             @csrf
                             @method('PATCH')

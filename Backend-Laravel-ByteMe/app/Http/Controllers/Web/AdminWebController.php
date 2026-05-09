@@ -98,6 +98,11 @@ class AdminWebController extends Controller
     public function banUser($id)
     {
         $user = User::findOrFail($id);
+
+        if ($user->role === 'admin') {
+            return back()->with('error', 'Admin tidak bisa diban');
+        }
+
         $user->status = 'banned';
         $user->save();
 
