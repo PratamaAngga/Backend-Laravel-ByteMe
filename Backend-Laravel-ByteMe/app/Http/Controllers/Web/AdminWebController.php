@@ -226,6 +226,8 @@ class AdminWebController extends Controller
             'password' => 'nullable|min:8|confirmed',
         ]);
 
+        // Tambahkan type hint User
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $user->username = $request->username;
         $user->email = $request->email;
