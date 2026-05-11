@@ -48,6 +48,11 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
     Route::get('/withdraws',        [WithdrawController::class, 'index']);
     Route::post('/withdraws',       [WithdrawController::class, 'store']);
     Route::get('/withdraws/{id}',   [WithdrawController::class, 'show']);
+
+    //kategori
+    Route::get('/kategori', function() {
+        return response()->json(\App\Models\Kategori::all());
+    });
 });
 
 // ─── Admin routes ──────────────────────────────────────────────────────────────
