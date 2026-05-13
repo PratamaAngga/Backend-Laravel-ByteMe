@@ -63,7 +63,11 @@ class AdminWebController extends Controller
     // Produk pending
     public function produkPending()
     {
-        $produk = Produk::where('status', 'pending')->latest()->paginate(10);
+        $produk = Produk::with('user') // ← tambahkan ini
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(10);
+        
         return view('admin.produk-pending', compact('produk'));
     }
 
