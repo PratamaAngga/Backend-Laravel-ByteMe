@@ -101,6 +101,15 @@ class PesananController extends Controller
                 ]);
             }
 
+            $midtransItemDetails = array_map(function($detail) {
+                return [
+                    'id'       => $detail['id'],
+                    'price'    => $detail['price'],
+                    'quantity' => $detail['quantity'],
+                    'name'     => $detail['name'],
+                ];
+            }, $itemDetails);
+
             $midtransParams = [
                 'transaction_details' => [
                     'order_id'     => $pesananId,
@@ -109,9 +118,8 @@ class PesananController extends Controller
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
-                    'phone'      => $user->phone,
                 ],
-                'item_details' => $itemDetails,
+                'item_details' => $midtransItemDetails, // ← pakai yang bersih
             ];
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);
