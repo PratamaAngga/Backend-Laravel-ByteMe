@@ -49,6 +49,9 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
     Route::post('/withdraws',       [WithdrawController::class, 'store']);
     Route::get('/withdraws/{id}',   [WithdrawController::class, 'show']);
 
+    Route::get('/seller/orders', [ProdukController::class, 'sellerOrders']);
+    
+
     //kategori
     Route::get('/kategori', function() {
         return response()->json(\App\Models\Kategori::all());
