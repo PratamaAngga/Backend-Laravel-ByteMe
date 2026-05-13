@@ -77,7 +77,6 @@ class PesananController extends Controller
                     'produk_id'         => $item->produk_id,
                     'jumlah'            => $jumlah,
                     'harga_satuan'      => $item->harga_satuan,
-                    'subtotal'          => $subtotal,
                 ]);
 
                 $itemDetails[] = [
