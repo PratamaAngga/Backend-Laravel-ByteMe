@@ -196,7 +196,7 @@ class ProdukController extends Controller
     {
         $userId = $request->user()->id;
 
-        $orders = DB::table('v_riwayat_penjualan_produk')
+        $orders = DB::table('v_riwayat_penjualan_produk_v2')
             ->where('user_id', $userId)
             ->orderByDesc('tgl_pesanan')
             ->get();
