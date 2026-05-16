@@ -66,28 +66,22 @@ class PesananController extends Controller
             $totalHarga = 0;
             $itemDetails = [];
 
+            // 1. Hitung total harga dan siapkan itemDetails dulu (TAPI JANGAN INSERT KE DETAIL DULU)
             foreach ($items as $item) {
                 $jumlah = $item->jumlah ?? 1;
                 $subtotal = $item->harga_satuan * $jumlah;
                 $totalHarga += $subtotal;
-
-                DetailPesanan::create([
-                    'detail_pesanan_id' => Str::uuid(),
-                    'pesanan_id'        => $pesananId,
-                    'produk_id'         => $item->produk_id,
-                    'jumlah'            => $jumlah,
-                    'harga_satuan'      => $item->harga_satuan,
-                    'subtotal'          => $subtotal,
-                ]);
 
                 $itemDetails[] = [
                     'id'       => $item->produk_id,
                     'price'    => (int) $item->harga_satuan,
                     'quantity' => (int) $jumlah,
                     'name'     => $item->produk->nama_produk,
+                    'item_obj' => $item // Simpan objek item sementara untuk loop insert nanti
                 ];
             }
 
+            // 2. INSERT KE TABEL PESANAN DULU (Orang tuanya lahir dulu)
             $pesanan = Pesanan::create([
                 'pesanan_id'  => $pesananId,
                 'user_id'     => $user->id,
@@ -95,6 +89,26 @@ class PesananController extends Controller
                 'total_harga' => $totalHarga,
                 'status'      => 'pending',
             ]);
+
+            // 3. BARU INSERT KE DETAIL_PESANAN (Anaknya menyusul)
+            foreach ($itemDetails as $detail) {
+                DetailPesanan::create([
+                    'detail_pesanan_id' => Str::uuid(),
+                    'pesanan_id'        => $pesananId,
+                    'produk_id'         => $detail['id'],
+                    'jumlah'            => $detail['quantity'],
+                    'harga_satuan'      => $detail['price']
+                ]);
+            }
+
+            $midtransItemDetails = array_map(function($detail) {
+                return [
+                    'id'       => $detail['id'],
+                    'price'    => $detail['price'],
+                    'quantity' => $detail['quantity'],
+                    'name'     => $detail['name'],
+                ];
+            }, $itemDetails);
 
             $midtransParams = [
                 'transaction_details' => [
@@ -104,9 +118,8 @@ class PesananController extends Controller
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
-                    'phone'      => $user->phone,
                 ],
-                'item_details' => $itemDetails,
+                'item_details' => $midtransItemDetails, // ← pakai yang bersih
             ];
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);

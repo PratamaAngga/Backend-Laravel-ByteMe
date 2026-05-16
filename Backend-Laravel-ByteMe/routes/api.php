@@ -57,6 +57,12 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
     // Kategori — DIPINDAH ke array syntax agar route:cache bisa berjalan
     Route::get('/kategori', function () {
         return response()->json(Kategori::all());
+    Route::get('/seller/orders', [ProdukController::class, 'sellerOrders']);
+    
+
+    //kategori
+    Route::get('/kategori', function() {
+        return response()->json(\App\Models\Kategori::all());
     });
 });
 

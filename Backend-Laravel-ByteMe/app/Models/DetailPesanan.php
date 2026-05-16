@@ -14,7 +14,7 @@ class DetailPesanan extends Model
 
     protected $fillable = [
         'detail_pesanan_id', 'pesanan_id',
-        'produk_id', 'jumlah', 'harga_satuan', 'subtotal',
+        'produk_id', 'jumlah', 'harga_satuan',
     ];
 
     public function produk()
