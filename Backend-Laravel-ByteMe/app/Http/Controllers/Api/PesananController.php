@@ -62,23 +62,14 @@ class PesananController extends Controller
         DB::beginTransaction();
 
         try {
-            $pesananId = Str::uuid();
+            $pesananId  = (string) Str::uuid();
             $totalHarga = 0;
             $itemDetails = [];
 
+            // 1. Hitung total harga dan siapkan item details dulu
             foreach ($items as $item) {
-                $jumlah = $item->jumlah ?? 1;
-                $subtotal = $item->harga_satuan * $jumlah;
-                $totalHarga += $subtotal;
-
-                DetailPesanan::create([
-                    'detail_pesanan_id' => Str::uuid(),
-                    'pesanan_id'        => $pesananId,
-                    'produk_id'         => $item->produk_id,
-                    'jumlah'            => $jumlah,
-                    'harga_satuan'      => $item->harga_satuan,
-                    'subtotal'          => $subtotal,
-                ]);
+                $jumlah      = $item->jumlah ?? 1;
+                $totalHarga += $item->harga_satuan * $jumlah;
 
                 $itemDetails[] = [
                     'id'       => $item->produk_id,
@@ -88,6 +79,7 @@ class PesananController extends Controller
                 ];
             }
 
+            // 2. Buat pesanan DULU
             $pesanan = Pesanan::create([
                 'pesanan_id'  => $pesananId,
                 'user_id'     => $user->id,
@@ -96,6 +88,18 @@ class PesananController extends Controller
                 'status'      => 'pending',
             ]);
 
+            // 3. Baru buat detail pesanan (tanpa subtotal!)
+            foreach ($items as $item) {
+                DetailPesanan::create([
+                    'detail_pesanan_id' => (string) Str::uuid(),
+                    'pesanan_id'        => $pesananId,
+                    'produk_id'         => $item->produk_id,
+                    'jumlah'            => $item->jumlah ?? 1,
+                    'harga_satuan'      => $item->harga_satuan,
+                ]);
+            }
+
+            // 4. Buat transaksi Midtrans
             $midtransParams = [
                 'transaction_details' => [
                     'order_id'     => $pesananId,
@@ -104,24 +108,26 @@ class PesananController extends Controller
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
-                    'phone'      => $user->phone,
                 ],
                 'item_details' => $itemDetails,
             ];
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);
 
+            // 5. Buat record pembayaran
             Pembayaran::create([
-                'pembayaran_id' => Str::uuid(),
+                'pembayaran_id' => (string) Str::uuid(),
                 'pesanan_id'    => $pesananId,
                 'metode'        => 'midtrans',
                 'status'        => 'pending',
             ]);
 
+            // 6. Hapus item dari keranjang
             DetailKeranjang::whereIn('detail_keranjang_id', $detailIds)
                 ->where('keranjang_id', $keranjang->keranjang_id)
                 ->delete();
 
+            // 7. Update total item keranjang
             $totalItem = DetailKeranjang::where('keranjang_id', $keranjang->keranjang_id)->count();
             $keranjang->total_item = $totalItem;
             $keranjang->save();
