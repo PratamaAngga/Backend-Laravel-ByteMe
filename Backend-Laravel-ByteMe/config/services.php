@@ -24,10 +24,11 @@ return [
     ],
 
     'supabase' => [
-        'url'            => env('SUPABASE_URL'),
-        'key'            => env('SUPABASE_SERVICE_KEY'),
-        'bucket'         => env('SUPABASE_BUCKET'),
-        'bucket_profile' => env('SUPABASE_BUCKET_PROFILE'),
+        'url'                     => env('SUPABASE_URL'),
+        'key'                     => env('SUPABASE_SERVICE_KEY'),
+        'bucket'                  => env('SUPABASE_BUCKET'),
+        'bucket_profile'          => env('SUPABASE_BUCKET_PROFILE'),
+        'transfer_receipt_bucket' => env('SUPABASE_TRANSFER_RECEIPT_BUCKET'),
     ],
 
     'midtrans' => [
