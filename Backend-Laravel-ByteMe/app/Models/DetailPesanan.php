@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class DetailPesanan extends Model
 {
@@ -13,9 +14,15 @@ class DetailPesanan extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'detail_pesanan_id', 'pesanan_id',
-        'produk_id', 'jumlah', 'harga_satuan', 'subtotal',
+        'detail_pesanan_id',
+        'pesanan_id',
+        'produk_id',
+        'jumlah',
+        'harga_satuan',
     ];
+
+    // ✅ Explicitly exclude subtotal dari mass assignment
+    protected $guarded = ['subtotal'];
 
     public function produk()
     {
