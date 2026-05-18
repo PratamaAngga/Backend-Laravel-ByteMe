@@ -26,7 +26,6 @@ class PesananController extends Controller
         $this->midtrans = $midtrans;
     }
 
-    // Checkout satu atau banyak item dari keranjang
     public function checkout(Request $request)
     {
         $request->validate([
@@ -66,9 +65,9 @@ class PesananController extends Controller
             $totalHarga = 0;
             $itemDetails = [];
 
-            // 1. Hitung total harga dan siapkan item details dulu
+            // 1. Hitung total harga
             foreach ($items as $item) {
-                $jumlah      = $item->jumlah ?? 1;
+                $jumlah = $item->jumlah ?? 1;
                 $totalHarga += $item->harga_satuan * $jumlah;
 
                 $itemDetails[] = [
@@ -79,7 +78,7 @@ class PesananController extends Controller
                 ];
             }
 
-            // 2. Buat pesanan DULU
+            // 2. Insert pesanan dulu
             $pesanan = Pesanan::create([
                 'pesanan_id'  => $pesananId,
                 'user_id'     => $user->id,
@@ -88,14 +87,18 @@ class PesananController extends Controller
                 'status'      => 'pending',
             ]);
 
-            // 3. Baru buat detail pesanan (tanpa subtotal!)
-            foreach ($items as $item) {
+            Log::info('Pesanan created: ' . $pesananId);
+
+            // 3. Insert detail pesanan
+            foreach ($itemDetails as $detail) {
+                Log::info('Inserting detail: ' . json_encode($detail));
+
                 DetailPesanan::create([
-                    'detail_pesanan_id' => (string) Str::uuid(),
+                    'detail_pesanan_id' => Str::uuid(),
                     'pesanan_id'        => $pesananId,
-                    'produk_id'         => $item->produk_id,
-                    'jumlah'            => $item->jumlah ?? 1,
-                    'harga_satuan'      => $item->harga_satuan,
+                    'produk_id'         => $detail['id'],
+                    'jumlah'            => $detail['quantity'],
+                    'harga_satuan'      => $detail['price'],
                 ]);
             }
 
@@ -114,7 +117,7 @@ class PesananController extends Controller
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);
 
-            // 5. Buat record pembayaran
+            // 5. Simpan pembayaran
             Pembayaran::create([
                 'pembayaran_id' => (string) Str::uuid(),
                 'pesanan_id'    => $pesananId,
@@ -143,13 +146,15 @@ class PesananController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Checkout error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Checkout gagal: ' . $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
             ], 500);
         }
     }
 
-    // List riwayat pesanan buyer
     public function index(Request $request)
     {
         $pesanan = Pesanan::where('user_id', $request->user()->id)
@@ -160,7 +165,6 @@ class PesananController extends Controller
         return response()->json($pesanan);
     }
 
-    // Detail satu pesanan
     public function show(Request $request, string $id)
     {
         $pesanan = Pesanan::where('pesanan_id', $id)
@@ -175,15 +179,13 @@ class PesananController extends Controller
         return response()->json($pesanan);
     }
 
-    // Webhook dari Midtrans (notifikasi pembayaran)
     public function webhook(Request $request)
     {
-        $serverKey  = config('services.midtrans.server_key');
-        $orderId    = $request->order_id;
-        $statusCode = $request->status_code;
+        $serverKey   = config('services.midtrans.server_key');
+        $orderId     = $request->order_id;
+        $statusCode  = $request->status_code;
         $grossAmount = $request->gross_amount;
 
-        // Verifikasi signature
         $signature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 
         if ($signature !== $request->signature_key) {
@@ -211,16 +213,14 @@ class PesananController extends Controller
 
         $pesanan->save();
 
-        // Update status pembayaran
         $pembayaran = Pembayaran::where('pesanan_id', $orderId)->first();
         if ($pembayaran) {
-            $pembayaran->status   = $pesanan->status === 'paid' ? 'success' : $transactionStatus;
-            $pembayaran->metode   = $request->payment_type ?? 'midtrans';
+            $pembayaran->status    = $pesanan->status === 'paid' ? 'success' : $transactionStatus;
+            $pembayaran->metode    = $request->payment_type ?? 'midtrans';
             $pembayaran->tgl_bayar = now();
             $pembayaran->save();
         }
 
-        // Kirim email kalau pembayaran berhasil
         if ($pesanan->status === 'paid') {
             $this->kirimEmailAksesProduk($pesanan);
         }
@@ -246,26 +246,24 @@ class PesananController extends Controller
                     pesananId:  $pesanan->pesanan_id,
                 ));
 
-                // Catat berhasil
                 EmailLog::create([
-                    'email_log_id' => \Illuminate\Support\Str::uuid(),
-                    'pesanan_id'   => $pesanan->pesanan_id,
-                    'user_id'      => $user->id,
+                    'email_log_id'    => Str::uuid(),
+                    'pesanan_id'      => $pesanan->pesanan_id,
+                    'user_id'         => $user->id,
                     'recipient_email' => $user->email,
-                    'status'       => 'sent',
-                    'sent_at'      => now(),
+                    'status'          => 'sent',
+                    'sent_at'         => now(),
                 ]);
 
             } catch (\Exception $e) {
-                // Catat gagal
                 EmailLog::create([
-                    'email_log_id'  => \Illuminate\Support\Str::uuid(),
-                    'pesanan_id'    => $pesanan->pesanan_id,
-                    'user_id'       => $user->id,
-                    'recipient_email'  => $user->email,
-                    'status'        => 'failed',
-                    'error_message' => $e->getMessage(),
-                    'sent_at'       => now(),
+                    'email_log_id'    => Str::uuid(),
+                    'pesanan_id'      => $pesanan->pesanan_id,
+                    'user_id'         => $user->id,
+                    'recipient_email' => $user->email,
+                    'status'          => 'failed',
+                    'error_message'   => $e->getMessage(),
+                    'sent_at'         => now(),
                 ]);
 
                 Log::error('Failed to send product access email: ' . $e->getMessage());
