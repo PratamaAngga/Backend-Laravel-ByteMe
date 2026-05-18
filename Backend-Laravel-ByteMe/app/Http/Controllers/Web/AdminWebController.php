@@ -281,7 +281,7 @@ class AdminWebController extends Controller
 
         // Kembalikan saldo seller
         $user = $withdraw->user;
-        $user->saldo += $withdraw->amount;
+        $user->balance += $withdraw->amount;
         $user->save();
 
         $withdraw->status     = 'rejected';
