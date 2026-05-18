@@ -26,48 +26,37 @@ class SupabaseStorageService
 
     public function upload(string $filePath, string $fileName, string $mimeType): string|false
     {
+        return $this->uploadToBucket($filePath, $fileName, $mimeType, $this->bucket);
+    }
+
+    public function uploadToBucket(string $filePath, string $fileName, string $mimeType, string $bucket): string|false
+    {
         $fileContents = file_get_contents($filePath);
-
-        if ($fileContents === false) {
-            Log::error('SupabaseStorageService: gagal membaca file', ['path' => $filePath]);
-            return false;
-        }
-
-        // Encode nama bucket agar spasi dan karakter khusus aman di URL
-        $encodedBucket = implode('/', array_map('rawurlencode', explode('/', $this->bucket)));
-
-        $uploadUrl = "{$this->url}/storage/v1/object/{$encodedBucket}/{$fileName}";
-
-        Log::info('SupabaseStorageService: upload ke', ['url' => $uploadUrl]);
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->key,
             'Content-Type'  => $mimeType,
-            'x-upsert'      => 'true', // timpa file lama jika ada (user upload ulang)
+            'x-upsert'      => 'true',
         ])->withBody($fileContents, $mimeType)
-          ->post($uploadUrl);
+        ->post("{$this->url}/storage/v1/object/{$bucket}/{$fileName}");
 
         if ($response->successful()) {
-            $publicUrl = "{$this->url}/storage/v1/object/public/{$encodedBucket}/{$fileName}";
-            Log::info('SupabaseStorageService: upload berhasil', ['publicUrl' => $publicUrl]);
-            return $publicUrl;
+            return "{$this->url}/storage/v1/object/public/{$bucket}/{$fileName}";
         }
-
-        Log::error('SupabaseStorageService: upload gagal', [
-            'status'   => $response->status(),
-            'response' => $response->body(),
-        ]);
 
         return false;
     }
 
     public function delete(string $fileName): bool
     {
-        $encodedBucket = implode('/', array_map('rawurlencode', explode('/', $this->bucket)));
+        return $this->deleteFromBucket($fileName, $this->bucket);
+    }
 
+    public function deleteFromBucket(string $fileName, string $bucket): bool
+    {
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->key,
-        ])->delete("{$this->url}/storage/v1/object/{$encodedBucket}/{$fileName}");
+        ])->delete("{$this->url}/storage/v1/object/{$bucket}/{$fileName}");
 
         return $response->successful();
     }
