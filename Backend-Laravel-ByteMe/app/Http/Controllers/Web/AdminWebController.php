@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Services\SupabaseStorageService;
 
 class AdminWebController extends Controller
 {
@@ -184,35 +185,110 @@ class AdminWebController extends Controller
         return back()->with('success', 'User berhasil diunban');
     }
 
-    // List withdraws
+    protected SupabaseStorageService $storage;
+
+    public function __construct(SupabaseStorageService $storage)
+    {
+        $this->storage = $storage;
+    }
+
+    // List withdraw pending
     public function withdraws()
     {
-        $withdraws = WithdrawRequest::with('user')->latest()->paginate(10);
+        $withdraws = WithdrawRequest::with('user')
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(10);
+
         return view('admin.withdraws', compact('withdraws'));
     }
 
-    // Approve withdraw
+    // List withdraw handled
+    public function withdrawsHandled()
+    {
+        $withdraws = WithdrawRequest::with('user')
+            ->where('status', 'handled')
+            ->latest()
+            ->paginate(10);
+
+        return view('admin.withdraws-handled', compact('withdraws'));
+    }
+
+    // Approve → ubah ke handled
     public function approveWithdraw($id)
     {
         $withdraw = WithdrawRequest::findOrFail($id);
-        $withdraw->status = 'approved';
-        $withdraw->admin_note = 'Approved by admin';
+
+        if ($withdraw->status !== 'pending') {
+            return back()->with('error', 'Request ini sudah diproses');
+        }
+
+        $withdraw->status = 'handled';
+        $withdraw->admin_note = 'Disetujui oleh admin';
         $withdraw->save();
 
-        return back()->with('success', 'Withdraw berhasil diapprove');
+        return back()->with('success', 'Request withdraw disetujui, silakan transfer manual');
+    }
+
+    // Upload bukti transfer → ubah ke success
+    public function uploadReceipt(Request $request, $id)
+    {
+        $request->validate([
+            'receipt_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'admin_note'   => 'nullable|string',
+        ]);
+
+        $withdraw = WithdrawRequest::findOrFail($id);
+
+        if ($withdraw->status !== 'handled') {
+            return back()->with('error', 'Request ini belum dalam status handled');
+        }
+
+        $file     = $request->file('receipt_file');
+        $fileName = 'receipt_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
+
+        $uploadedUrl = $this->storage->uploadToBucket(
+            $file->getRealPath(),
+            $fileName,
+            $file->getMimeType(),
+            'transfer_receipt'
+        );
+
+        if (!$uploadedUrl) {
+            return back()->with('error', 'Gagal mengupload bukti transfer');
+        }
+
+        $withdraw->receipt_file = $uploadedUrl;
+        $withdraw->status       = 'success';
+        $withdraw->admin_note   = $request->admin_note ?? $withdraw->admin_note;
+        $withdraw->save();
+
+        return back()->with('success', 'Bukti transfer berhasil diupload, withdraw selesai');
     }
 
     // Reject withdraw
     public function rejectWithdraw(Request $request, $id)
     {
-        $request->validate(['alasan' => 'required|string']);
+        $request->validate([
+            'alasan' => 'required|string',
+        ]);
 
         $withdraw = WithdrawRequest::findOrFail($id);
-        $withdraw->status = 'rejected';
+
+        if ($withdraw->status !== 'pending') {
+            return back()->with('error', 'Request ini sudah diproses');
+        }
+
+        // Kembalikan saldo seller
+        $user = $withdraw->user;
+        $user->saldo += $withdraw->amount;
+        $user->save();
+
+        $withdraw->status     = 'rejected';
         $withdraw->admin_note = $request->alasan;
         $withdraw->save();
 
-        return back()->with('success', 'Withdraw berhasil direject');
+        return back()->with('success', 'Request withdraw direject dan saldo dikembalikan');
     }
 
     // Profile
