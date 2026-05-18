@@ -61,7 +61,7 @@ class PesananController extends Controller
         DB::beginTransaction();
 
         try {
-            $pesananId = Str::uuid();
+            $pesananId  = (string) Str::uuid();
             $totalHarga = 0;
             $itemDetails = [];
 
@@ -119,7 +119,7 @@ class PesananController extends Controller
 
             // 5. Simpan pembayaran
             Pembayaran::create([
-                'pembayaran_id' => Str::uuid(),
+                'pembayaran_id' => (string) Str::uuid(),
                 'pesanan_id'    => $pesananId,
                 'metode'        => 'midtrans',
                 'status'        => 'pending',
@@ -130,6 +130,7 @@ class PesananController extends Controller
                 ->where('keranjang_id', $keranjang->keranjang_id)
                 ->delete();
 
+            // 7. Update total item keranjang
             $totalItem = DetailKeranjang::where('keranjang_id', $keranjang->keranjang_id)->count();
             $keranjang->total_item = $totalItem;
             $keranjang->save();

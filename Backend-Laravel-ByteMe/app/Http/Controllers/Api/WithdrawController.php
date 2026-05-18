@@ -53,10 +53,10 @@ class WithdrawController extends Controller
         ]);
 
         // Cek saldo mencukupi
-        if ($user->saldo < $request->amount) {
+        if ($user->balance < $request->amount) {
             return response()->json([
                 'message' => 'Saldo tidak mencukupi',
-                'saldo'   => $user->saldo,
+                'balance'   => $user->balance,
             ], 400);
         }
 
@@ -72,7 +72,7 @@ class WithdrawController extends Controller
         }
 
         // Kurangi saldo sementara (hold)
-        $user->saldo -= $request->amount;
+        $user->balance -= $request->amount;
         $user->save();
 
         $withdraw = WithdrawRequest::create([
@@ -88,7 +88,7 @@ class WithdrawController extends Controller
         return response()->json([
             'message'  => 'Request withdraw berhasil dikirim',
             'withdraw' => $withdraw,
-            'saldo'    => $user->saldo,
+            'balance'    => $user->balance,
         ], 201);
     }
 }
