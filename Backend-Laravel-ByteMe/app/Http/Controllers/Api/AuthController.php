@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -44,11 +46,11 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string',
             'password' => 'required',
-            'role'     => 'required|in:buyer,seller,admin',  // ← TAMBAHKAN
+            'role'     => 'required|in:buyer,seller,admin',
         ]);
 
         $user = User::where('username', $request->username)
-            ->where('role', $request->role)      // ← TAMBAHKAN filter role
+            ->where('role', $request->role)
             ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -78,7 +80,6 @@ class AuthController extends Controller
             ], $httpCode);
         }
 
-        // Cek apakah akun di-ban atau suspended
         if (in_array($user->status, ['banned', 'suspended'])) {
             return response()->json([
                 'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
@@ -108,7 +109,11 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
-    // Edit profile (tidak boleh ubah role)
+    /**
+     * Update profil user.
+     * Menerima POST dengan field _method=PATCH agar bisa kirim multipart/form-data
+     * (Flutter http package tidak support PATCH + file upload).
+     */
     public function update(Request $request)
     {
         $user = $request->user();
@@ -125,9 +130,10 @@ class AuthController extends Controller
                 'email',
                 Rule::unique('profiles')->ignore($user->id, 'id'),
             ],
-            'phone'   => 'sometimes|nullable|string|max:30',
-            'password'              => 'sometimes|min:8|confirmed',
+            'phone'                 => 'sometimes|nullable|string|max:30',
+            'password'              => 'sometimes|min:6|confirmed',
             'password_confirmation' => 'required_with:password',
+            'profile_image'         => 'sometimes|nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         if ($request->filled('username')) {
@@ -144,6 +150,34 @@ class AuthController extends Controller
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
+        }
+
+        if ($request->hasFile('profile_image')) {
+            $file      = $request->file('profile_image');
+            $mimeType  = $file->getMimeType();
+            $extension = $file->getClientOriginalExtension();
+
+            // Pakai UUID user sebagai nama file agar unik dan bisa di-upsert
+            $fileName = $user->id . '.' . $extension;
+
+            Log::info('AuthController: upload foto profil', [
+                'user_id'   => $user->id,
+                'fileName'  => $fileName,
+                'mimeType'  => $mimeType,
+            ]);
+
+            $supabase = (new SupabaseStorageService())->useBucket('bucket_profile');
+            $imageUrl = $supabase->upload($file->getRealPath(), $fileName, $mimeType);
+
+            if ($imageUrl !== false) {
+                $user->profile_image = $imageUrl;
+                Log::info('AuthController: foto profil tersimpan', ['url' => $imageUrl]);
+            } else {
+                Log::error('AuthController: gagal upload foto profil', ['user_id' => $user->id]);
+                return response()->json([
+                    'message' => 'Gagal upload foto profil ke storage. Pastikan bucket sudah dibuat dan nama bucket di .env sudah benar.',
+                ], 500);
+            }
         }
 
         $user->save();

@@ -8,7 +8,6 @@ use App\Models\Produk;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 
 class ProdukController extends Controller
 {
@@ -190,17 +189,5 @@ class ProdukController extends Controller
             ->get();
 
         return response()->json($produk);
-    }
-
-    public function sellerOrders(Request $request)
-    {
-        $userId = $request->user()->id;
-
-        $orders = DB::table('v_riwayat_penjualan_produk_v2')
-            ->where('user_id', $userId)
-            ->orderByDesc('tgl_pesanan')
-            ->get();
-
-        return response()->json($orders);
     }
 }

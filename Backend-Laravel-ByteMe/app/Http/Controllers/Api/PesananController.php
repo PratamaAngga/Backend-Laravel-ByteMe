@@ -75,6 +75,7 @@ class PesananController extends Controller
                     'price'    => (int) $item->harga_satuan,
                     'quantity' => (int) $jumlah,
                     'name'     => $item->produk->nama_produk,
+                    'item_obj' => $item // Simpan objek item sementara untuk loop insert nanti
                 ];
             }
 
@@ -111,6 +112,7 @@ class PesananController extends Controller
                 'customer_details' => [
                     'first_name' => $user->username,
                     'email'      => $user->email,
+                    'phone'      => $user->phone,
                 ],
                 'item_details' => $itemDetails,
             ];

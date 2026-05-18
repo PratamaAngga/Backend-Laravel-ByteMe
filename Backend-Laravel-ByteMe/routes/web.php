@@ -34,6 +34,8 @@ Route::prefix('admin')->group(function () {
         Route::get('/withdraws', [AdminWebController::class, 'withdraws'])->name('admin.withdraws');
         Route::patch('/withdraws/{id}/approve', [AdminWebController::class, 'approveWithdraw'])->name('admin.withdraws.approve');
         Route::patch('/withdraws/{id}/reject', [AdminWebController::class, 'rejectWithdraw'])->name('admin.withdraws.reject');
+        Route::get('/withdraws/handled',         [AdminWebController::class, 'withdrawsHandled'])->name('admin.withdraws.handled');
+        Route::post('/withdraws/{id}/receipt',   [AdminWebController::class, 'uploadReceipt'])->name('admin.withdraws.receipt');
         Route::get('/profile', [AdminWebController::class, 'profile'])->name('admin.profile');
         Route::patch('/profile', [AdminWebController::class, 'updateProfile'])->name('admin.profile.update');
     });
