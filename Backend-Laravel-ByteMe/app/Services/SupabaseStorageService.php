@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class SupabaseStorageService
 {
@@ -17,7 +18,18 @@ class SupabaseStorageService
         $this->bucket = config('services.supabase.bucket');
     }
 
+    public function useBucket(string $bucketConfigKey): static
+    {
+        $this->bucket = config('services.supabase.' . $bucketConfigKey);
+        return $this;
+    }
+
     public function upload(string $filePath, string $fileName, string $mimeType): string|false
+    {
+        return $this->uploadToBucket($filePath, $fileName, $mimeType, $this->bucket);
+    }
+
+    public function uploadToBucket(string $filePath, string $fileName, string $mimeType, string $bucket): string|false
     {
         $fileContents = file_get_contents($filePath);
 
@@ -26,10 +38,10 @@ class SupabaseStorageService
             'Content-Type'  => $mimeType,
             'x-upsert'      => 'true',
         ])->withBody($fileContents, $mimeType)
-          ->post("{$this->url}/storage/v1/object/{$this->bucket}/{$fileName}");
+        ->post("{$this->url}/storage/v1/object/{$bucket}/{$fileName}");
 
         if ($response->successful()) {
-            return "{$this->url}/storage/v1/object/public/{$this->bucket}/{$fileName}";
+            return "{$this->url}/storage/v1/object/public/{$bucket}/{$fileName}";
         }
 
         return false;
@@ -37,9 +49,14 @@ class SupabaseStorageService
 
     public function delete(string $fileName): bool
     {
+        return $this->deleteFromBucket($fileName, $this->bucket);
+    }
+
+    public function deleteFromBucket(string $fileName, string $bucket): bool
+    {
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->key,
-        ])->delete("{$this->url}/storage/v1/object/{$this->bucket}/{$fileName}");
+        ])->delete("{$this->url}/storage/v1/object/{$bucket}/{$fileName}");
 
         return $response->successful();
     }

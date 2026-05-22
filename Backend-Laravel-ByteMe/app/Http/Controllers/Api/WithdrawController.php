@@ -9,48 +9,71 @@ use Illuminate\Support\Str;
 
 class WithdrawController extends Controller
 {
-    // List withdraw request milik seller yang login
+    // List riwayat withdraw seller
     public function index(Request $request)
     {
-        $user = $request->user();
-
-        if ($user->role !== 'seller') {
-            return response()->json(['message' => 'Hanya seller yang bisa melihat withdraw request'], 403);
-        }
-
-        $withdraws = WithdrawRequest::where('user_id', $user->id)
+        $withdraws = WithdrawRequest::where('user_id', $request->user()->id)
             ->latest()
             ->get();
 
         return response()->json($withdraws);
     }
 
-    // Seller buat withdraw request baru
+    // Detail satu withdraw
+    public function show(Request $request, string $id)
+    {
+        $withdraw = WithdrawRequest::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (!$withdraw) {
+            return response()->json(['message' => 'Request withdraw tidak ditemukan'], 404);
+        }
+
+        return response()->json($withdraw);
+    }
+
+    // Request withdraw baru
     public function store(Request $request)
     {
         $user = $request->user();
 
+        // Cek role seller
         if ($user->role !== 'seller') {
-            return response()->json(['message' => 'Hanya seller yang bisa mengajukan withdraw'], 403);
+            return response()->json([
+                'message' => 'Hanya seller yang bisa request withdraw'
+            ], 403);
         }
 
         $request->validate([
-            'amount'              => 'required|numeric|min:10000',
+            'amount'              => 'required|numeric|min:50000',
             'bank_name'           => 'required|string|max:100',
             'bank_account_number' => 'required|string|max:50',
-            'bank_account_name'   => 'required|string|max:255',
+            'bank_account_name'   => 'required|string|max:100',
         ]);
 
-        // Cek apakah ada pending request yang belum selesai
-        $pendingExists = WithdrawRequest::where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->exists();
-
-        if ($pendingExists) {
+        // Cek saldo mencukupi
+        if ($user->balance < $request->amount) {
             return response()->json([
-                'message' => 'Anda masih memiliki withdraw request yang sedang diproses. Tunggu hingga selesai sebelum mengajukan yang baru.',
-            ], 409);
+                'message' => 'Saldo tidak mencukupi',
+                'balance'   => $user->balance,
+            ], 400);
         }
+
+        // Cek apakah ada withdraw pending
+        $pendingWithdraw = WithdrawRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($pendingWithdraw) {
+            return response()->json([
+                'message' => 'Kamu masih memiliki request withdraw yang pending'
+            ], 400);
+        }
+
+        // Kurangi saldo sementara (hold)
+        $user->balance -= $request->amount;
+        $user->save();
 
         $withdraw = WithdrawRequest::create([
             'id'                  => Str::uuid(),
@@ -60,26 +83,12 @@ class WithdrawController extends Controller
             'bank_account_number' => $request->bank_account_number,
             'bank_account_name'   => $request->bank_account_name,
             'status'              => 'pending',
-            'admin_note'          => null,
         ]);
 
         return response()->json([
-            'message'  => 'Withdraw request berhasil diajukan, menunggu persetujuan admin',
+            'message'  => 'Request withdraw berhasil dikirim',
             'withdraw' => $withdraw,
+            'balance'    => $user->balance,
         ], 201);
-    }
-
-    // Detail satu withdraw request milik seller
-    public function show(Request $request, string $id)
-    {
-        $withdraw = WithdrawRequest::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
-
-        if (!$withdraw) {
-            return response()->json(['message' => 'Withdraw request tidak ditemukan'], 404);
-        }
-
-        return response()->json($withdraw);
     }
 }

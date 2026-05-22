@@ -2,7 +2,10 @@
 nixPkgs = ["php83", "php83Extensions.pdo", "php83Extensions.pdo_pgsql", "php83Extensions.mbstring", "php83Extensions.tokenizer", "php83Extensions.xml", "php83Extensions.curl", "php83Extensions.zip", "php83Extensions.openssl", "php83Extensions.pcre", "php83Extensions.fileinfo", "composer"]
 
 [phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader", "php artisan config:cache", "php artisan route:cache"]
+# DIHAPUS: php artisan route:cache
+# Alasan: route:cache TIDAK kompatibel dengan Closure routes di api.php (/kategori, /email-log)
+# Jika route:cache gagal, Laravel fallback ke "route not found" untuk SEMUA route API
+cmds = ["composer install --no-dev --optimize-autoloader", "php artisan config:cache", "php artisan optimize"]
 
 [start]
 cmd = "php artisan migrate --force && php artisan db:seed --class=AdminSeeder --force; php artisan serve --host=0.0.0.0 --port=$PORT"
