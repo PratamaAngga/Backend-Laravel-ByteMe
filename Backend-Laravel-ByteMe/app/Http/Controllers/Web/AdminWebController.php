@@ -32,7 +32,7 @@ class AdminWebController extends Controller
         $user = User::where('username', $request->username)->first();
 
         if (!$user || !Hash::check($request->password, $user->password) || $user->role !== 'admin') {
-            return back()->withErrors(['username' => 'Username, password salah atau bukan admin']);
+            return back()->withErrors(['username' => 'Incorrect username, password, or unauthorized access.']);
         }
 
         Auth::login($user);
@@ -79,7 +79,7 @@ class AdminWebController extends Controller
         $produk->status = 'approved';
         $produk->save();
 
-        return back()->with('success', 'Produk berhasil diapprove');
+        return back()->with('success', 'Product approved successfully.');
     }
 
     // Reject produk
@@ -91,7 +91,7 @@ class AdminWebController extends Controller
         $produk->status = 'rejected';
         $produk->save();
 
-        return back()->with('success', 'Produk berhasil direject');
+        return back()->with('success', 'Product rejected successfully.');
     }
 
     // List users
@@ -126,7 +126,7 @@ class AdminWebController extends Controller
             'nama' => $request->nama,
         ]);
 
-        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil ditambahkan');
+        return redirect()->route('admin.categories')->with('success', 'Category added successfully.');
     }
 
     // Form edit kategori
@@ -148,7 +148,7 @@ class AdminWebController extends Controller
         $kategori->nama = $request->nama;
         $kategori->save();
 
-        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil diupdate');
+        return redirect()->route('admin.categories')->with('success', 'Category updated successfully.');
     }
 
     // Hapus kategori
@@ -157,7 +157,7 @@ class AdminWebController extends Controller
         $kategori = Kategori::findOrFail($id);
         $kategori->delete();
 
-        return redirect()->route('admin.categories')->with('success', 'Kategori berhasil dihapus');
+        return redirect()->route('admin.categories')->with('success', 'Category deleted successfully.');
     }
 
     // Ban user
@@ -166,13 +166,13 @@ class AdminWebController extends Controller
         $user = User::findOrFail($id);
 
         if ($user->role === 'admin') {
-            return back()->with('error', 'Admin tidak bisa diban');
+            return back()->with('error', 'Admin accounts cannot be banned.');
         }
 
         $user->status = 'banned';
         $user->save();
 
-        return back()->with('success', 'User berhasil diban');
+        return back()->with('success', 'User banned successfully.');
     }
 
     // Unban user
@@ -182,7 +182,7 @@ class AdminWebController extends Controller
         $user->status = 'active';
         $user->save();
 
-        return back()->with('success', 'User berhasil diunban');
+        return back()->with('success', 'User unbanned successfully.');
     }
 
     protected SupabaseStorageService $storage;
@@ -301,12 +301,11 @@ class AdminWebController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:255|unique:profiles,username,' . Auth::id(),
-            'email' => 'required|email|unique:profiles,email,' . Auth::id(),
+            'username' => 'required|string|max:255|unique:users,username,' . Auth::id(),
+            'email' => 'required|email|unique:users,email,' . Auth::id(),
             'password' => 'nullable|min:8|confirmed',
         ]);
 
-        // Tambahkan type hint User
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $user->username = $request->username;
@@ -316,6 +315,6 @@ class AdminWebController extends Controller
         }
         $user->save();
 
-        return back()->with('success', 'Profile berhasil diupdate');
+        return back()->with('success', 'Profile updated successfully.');
     }
 }
