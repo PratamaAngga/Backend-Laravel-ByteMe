@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\AdminWithdrawController;
 use App\Http\Controllers\Api\KeranjangController;
 use App\Http\Controllers\Api\PesananController;
 use App\Http\Controllers\Api\WithdrawController;
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\FavoritController;
 use App\Http\Controllers\Api\KategoriController;   // ← tambah import
 use App\Http\Controllers\Api\EmailLogController;   // ← tambah import
 use App\Models\Kategori;
@@ -60,6 +62,11 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
     Route::get('/kategori', function () {
         return response()->json(\App\Models\Kategori::all());
     });
+
+    Route::get('/favorit',              [FavoritController::class, 'index']);
+    Route::post('/favorit',             [FavoritController::class, 'store']);
+    Route::delete('/favorit/{produkId}',[FavoritController::class, 'destroy']);
+    Route::get('/favorit/check/{produkId}', [FavoritController::class, 'check']);
 });
 
 // ─── Admin routes ─────────────────────────────────────────────────────────────
