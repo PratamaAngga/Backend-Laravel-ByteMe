@@ -63,10 +63,18 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
         return response()->json(\App\Models\Kategori::all());
     });
 
-    Route::get('/favorit',              [FavoritController::class, 'index']);
-    Route::post('/favorit',             [FavoritController::class, 'store']);
-    Route::delete('/favorit/{produkId}',[FavoritController::class, 'destroy']);
-    Route::get('/favorit/check/{produkId}', [FavoritController::class, 'check']);
+    Route::get('/favorit',                      [FavoritController::class, 'index']);
+    Route::post('/favorit',                     [FavoritController::class, 'store']);
+    Route::get('/favorit/check/{produkId}',     [FavoritController::class, 'check']); // ← ini dulu
+    Route::delete('/favorit/{produkId}',        [FavoritController::class, 'destroy']);
+
+
+    // Review
+    Route::post('/review', [ReviewController::class, 'store']);
+    Route::patch('/review/{produk_id}', [ReviewController::class, 'update']);
+    Route::get('/review/status/{produk_id}', [ReviewController::class, 'status']);
+    Route::get('/my-reviews', [ReviewController::class, 'myReviews']);
+    Route::get('/produk/{produk_id}/reviews', [ReviewController::class, 'indexByProduk']);
 });
 
 // ─── Admin routes ─────────────────────────────────────────────────────────────
@@ -87,24 +95,6 @@ Route::middleware(['auth:sanctum', 'is_admin', 'cors'])->prefix('admin')->group(
     Route::get('/withdraws/pending',        [AdminWithdrawController::class, 'pendingList']);
     Route::patch('/withdraws/{id}/approve', [AdminWithdrawController::class, 'approve']);
     Route::patch('/withdraws/{id}/reject',  [AdminWithdrawController::class, 'reject']);
-
-    // ------- REVIEW ROUTES (tambahkan di dalam blok auth:sanctum) --------
- 
-    // Buyer: submit review baru
-    Route::post('/review', [ReviewController::class, 'store']);
-    
-    // Buyer: update review sendiri (per produk)
-    Route::patch('/review/{produk_id}', [ReviewController::class, 'update']);
-    
-    // Buyer: lihat status & review sendiri per produk
-    Route::get('/review/status/{produk_id}', [ReviewController::class, 'status']);
-    
-    // Buyer: semua review yang pernah ditulis
-    Route::get('/my-reviews', [ReviewController::class, 'myReviews']);
-    
-    // ------- REVIEW BY PRODUK (public, tapi tetap butuh token untuk context) --------
-    // Ambil semua review + summary rating untuk 1 produk
-    Route::get('/produk/{produk_id}/reviews', [ReviewController::class, 'indexByProduk']);
 
     // Email log — DIPINDAH ke array syntax agar route:cache bisa berjalan
     Route::get('/email-log', function () {
