@@ -23,6 +23,8 @@ class ProdukController extends Controller
     public function index()
     {
         $produk = Produk::with('categories')
+            ->withAvg('reviews', 'rating')  // ← tambahkan ini
+            ->withCount('reviews')           // ← dan ini
             ->where('status', 'approved')
             ->latest()
             ->get();
@@ -34,6 +36,8 @@ class ProdukController extends Controller
     public function show(string $id)
     {
         $produk = Produk::with('categories')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('produk_id', $id)
             ->where('status', 'approved')
             ->first();
