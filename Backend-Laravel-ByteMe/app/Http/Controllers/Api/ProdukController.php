@@ -188,7 +188,17 @@ class ProdukController extends Controller
     // List produk milik seller yang sedang login
     public function myProduk(Request $request)
     {
+        $produkTable = (new Produk())->getTable();
+
+        // ✅ PERBAIKAN: Melakukan Subquery hitung total item terjual dari view penjualan Angga
         $produk = Produk::with('categories')
+            ->select($produkTable . '.*')
+            ->addSelect([
+                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
+                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
+                    ->whereColumn('produk_id', $produkTable . '.produk_id')
+                    ->where('status_pembayaran', 'success')
+            ])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
