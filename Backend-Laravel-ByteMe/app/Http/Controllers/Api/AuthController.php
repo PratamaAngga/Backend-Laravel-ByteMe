@@ -30,6 +30,7 @@ class AuthController extends Controller
             'phone'    => $request->phone,
             'password' => Hash::make($request->password),
             'role'     => $request->role ?? 'buyer',
+            'balance'  => 0.0,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -59,6 +60,9 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // ✅ MEMASTIKAN TIPE DATA BALANCE DI-KONVERSI KE ANGKA (DOUBLE) SEBELUM DIKIRIM KE FLUTTER
+        $user->balance = (double)($user->balance ?? 0.0);
+
         $statusMessages = [
             'warning'   => 'Akun kamu sedang dalam status peringatan. Harap perhatikan ketentuan penggunaan.',
             'suspended' => 'Akun kamu sedang disuspend sementara. Hubungi admin untuk informasi lebih lanjut.',
@@ -77,6 +81,7 @@ class AuthController extends Controller
                 'message' => $statusMessages[$user->status],
                 'status'  => $user->status,
                 'token'   => $token,
+                'user'    => $user,
             ], $httpCode);
         }
 
@@ -106,7 +111,9 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+        $user->balance = (double)($user->balance ?? 0.0);
+        return response()->json($user);
     }
 
     /**
@@ -114,6 +121,7 @@ class AuthController extends Controller
      * Menerima POST dengan field _method=PATCH agar bisa kirim multipart/form-data
      * (Flutter http package tidak support PATCH + file upload).
      */
+
     public function update(Request $request)
     {
         $user = $request->user();
@@ -158,6 +166,7 @@ class AuthController extends Controller
             $extension = $file->getClientOriginalExtension();
 
             // Pakai UUID user sebagai nama file agar unik dan bisa di-upsert
+
             $fileName = $user->id . '.' . $extension;
 
             Log::info('AuthController: upload foto profil', [
@@ -181,6 +190,7 @@ class AuthController extends Controller
         }
 
         $user->save();
+        $user->balance = (double)($user->balance ?? 0.0);
 
         return response()->json([
             'message' => 'Profil berhasil diperbarui',
