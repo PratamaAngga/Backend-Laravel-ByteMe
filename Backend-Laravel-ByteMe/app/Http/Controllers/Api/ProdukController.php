@@ -57,7 +57,7 @@ class ProdukController extends Controller
             'deskripsi'   => 'required|string',
             'harga'       => 'required|numeric|min:0',
             'file'        => 'required|file|mimes:jpg,jpeg,png,pdf,zip|max:51200',
-            'access_url'  => 'required|string',
+            'access_url'  => 'nullable|string',
             'kategori_ids' => 'sometimes|array',
             'kategori_ids.*' => 'string|exists:kategori,id',
             'kategori' => 'sometimes|array',
@@ -91,7 +91,7 @@ class ProdukController extends Controller
             'status'      => 'pending',
             'file_path'   => $uploadedUrl,
             'file_bucket' => config('services.supabase.bucket'),
-            'access_url'  => $request->access_url,
+            'access_url'  => $request->access_url ?? '-', // ✅ default jika null
         ]);
 
         $kategoriIds = $request->input('kategori_ids', $request->input('kategori', []));
