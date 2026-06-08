@@ -221,11 +221,54 @@ class PesananController extends Controller
             $pembayaran->save();
         }
 
+        // Kirim email kalau pembayaran berhasil
         if ($pesanan->status === 'paid') {
             $this->kirimEmailAksesProduk($pesanan);
+            $this->kreditSaldoSeller($pesanan); // ← tambahkan ini
         }
 
         return response()->json(['message' => 'Webhook berhasil diproses']);
+    }
+
+    private function kreditSaldoSeller(Pesanan $pesanan)
+    {
+        $detailPesanan = DetailPesanan::where('pesanan_id', $pesanan->pesanan_id)
+            ->with('produk.user')
+            ->get();
+
+        // Ambil akun admin untuk ditambah komisi
+        $admin = \App\Models\User::where('role', 'admin')->first();
+
+        foreach ($detailPesanan as $detail) {
+            $seller = $detail->produk->user;
+
+            if (!$seller || $seller->role !== 'seller') {
+                continue;
+            }
+
+            // Hitung pembagian
+            $hargaBayar = $detail->harga_satuan;
+            $hargaAsli  = round($hargaBayar / 1.11, 2);
+            $komisi     = round($hargaBayar - $hargaAsli, 2);
+
+            // Tambah saldo seller (harga asli tanpa komisi)
+            $seller->balance += $hargaAsli;
+            $seller->save();
+
+            // Tambah saldo admin (komisi 11%)
+            if ($admin) {
+                $admin->balance += $komisi;
+                $admin->save();
+            }
+
+            Log::info('Distribusi saldo setelah pembayaran', [
+                'pesanan_id'  => $pesanan->pesanan_id,
+                'produk_id'   => $detail->produk_id,
+                'harga_bayar' => $hargaBayar,
+                'seller_dapat'=> $hargaAsli,
+                'komisi_admin'=> $komisi,
+            ]);
+        }
     }
 
     private function kirimEmailAksesProduk(Pesanan $pesanan)
