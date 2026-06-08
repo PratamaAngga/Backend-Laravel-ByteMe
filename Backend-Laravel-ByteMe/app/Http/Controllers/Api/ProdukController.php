@@ -19,12 +19,22 @@ class ProdukController extends Controller
         $this->storage = $storage;
     }
 
-    // List semua produk yang sudah approved (untuk marketplace)
+    // 1. List semua produk yang sudah approved (untuk marketplace / explore pembeli)
     public function index()
     {
+        $produkTable = (new Produk())->getTable();
+
         $produk = Produk::with('categories')
-            ->withAvg('reviews', 'rating')  // ← tambahkan ini
-            ->withCount('reviews')           // ← dan ini
+            ->withAvg('reviews', 'rating')  
+            ->withCount('reviews')          
+            ->select($produkTable . '.*')
+            // 🌟 PERBAIKAN BACKEND: Menambahkan hitungan total terjual ke halaman utama marketplace
+            ->addSelect([
+                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
+                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
+                    ->whereColumn('produk_id', $produkTable . '.produk_id')
+                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement']) // Kebal huruf kapital & status Midtrans
+            ])
             ->where('status', 'approved')
             ->latest()
             ->get();
@@ -32,12 +42,22 @@ class ProdukController extends Controller
         return response()->json($produk);
     }
 
-    // Detail satu produk
+    // 2. Detail satu produk (saat pembeli klik produk)
     public function show(string $id)
     {
+        $produkTable = (new Produk())->getTable();
+
         $produk = Produk::with('categories')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
+            ->select($produkTable . '.*')
+            // 🌟 PERBAIKAN BACKEND: Menambahkan hitungan total terjual ke halaman detail produk
+            ->addSelect([
+                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
+                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
+                    ->whereColumn('produk_id', $produkTable . '.produk_id')
+                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement'])
+            ])
             ->where('produk_id', $id)
             ->where('status', 'approved')
             ->first();
@@ -91,7 +111,7 @@ class ProdukController extends Controller
             'status'      => 'pending',
             'file_path'   => $uploadedUrl,
             'file_bucket' => config('services.supabase.bucket'),
-            'access_url'  => $request->access_url ?? '-', // ✅ default jika null
+            'access_url'  => $request->access_url ?? '-', 
         ]);
 
         $kategoriIds = $request->input('kategori_ids', $request->input('kategori', []));
@@ -151,7 +171,7 @@ class ProdukController extends Controller
         }
 
         $produk->fill($request->only(['nama_produk', 'deskripsi', 'harga', 'access_url']));
-        $produk->status = 'pending'; // reset ke pending kalau diedit
+        $produk->status = 'pending'; 
         $produk->save();
 
         if ($request->has('kategori_ids') || $request->has('kategori')) {
@@ -185,19 +205,19 @@ class ProdukController extends Controller
         return response()->json(['message' => 'Produk berhasil dihapus']);
     }
 
-    // List produk milik seller yang sedang login
+    // 3. List produk milik seller yang sedang login
     public function myProduk(Request $request)
     {
         $produkTable = (new Produk())->getTable();
 
-        // ✅ PERBAIKAN: Melakukan Subquery hitung total item terjual dari view penjualan Angga
+        // 🌟 PERBAIKAN BACKEND: Menambahkan fungsi LOWER() agar kebal Case-Sensitive PostgreSQL
         $produk = Produk::with('categories')
             ->select($produkTable . '.*')
             ->addSelect([
                 'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
                     ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
-                    ->whereColumn('produk_id', $produkTable . '.produk_id')
-                    ->where('status_pembayaran', 'success')
+                    ->whereColumn('v_riwayat_penjualan_produk_v2.produk_id', $produkTable . '.produk_id')
+                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement']) 
             ])
             ->where('user_id', $request->user()->id)
             ->latest()
