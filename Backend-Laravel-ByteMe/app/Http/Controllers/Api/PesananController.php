@@ -8,6 +8,7 @@ use App\Models\DetailPesanan;
 use App\Models\Keranjang;
 use App\Models\Pembayaran;
 use App\Models\Pesanan;
+use App\Models\VHistoryPembelian;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -312,5 +313,31 @@ class PesananController extends Controller
                 Log::error('Failed to send product access email: ' . $e->getMessage());
             }
         }
+    }
+
+    // History pembelian buyer
+    public function historyPembelian(Request $request)
+    {
+        $history = VHistoryPembelian::where('buyer_id', $request->user()->id)
+            ->orderByDesc('tgl_pesanan')
+            ->get();
+
+        return response()->json([
+            'message' => 'History pembelian berhasil diambil',
+            'data'    => $history,
+        ]);
+    }
+
+    // History penjualan seller
+    public function historyPenjualan(Request $request)
+    {
+        $history = VHistoryPembelian::where('seller_id', $request->user()->id)
+            ->orderByDesc('tgl_pesanan')
+            ->get();
+
+        return response()->json([
+            'message' => 'History penjualan berhasil diambil',
+            'data'    => $history,
+        ]);
     }
 }

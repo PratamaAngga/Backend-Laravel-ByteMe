@@ -75,6 +75,9 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
     Route::get('/review/status/{produk_id}', [ReviewController::class, 'status']);
     Route::get('/my-reviews', [ReviewController::class, 'myReviews']);
     Route::get('/produk/{produk_id}/reviews', [ReviewController::class, 'indexByProduk']);
+
+    Route::get('/history/pembelian',  [PesananController::class, 'historyPembelian']);
+    Route::get('/history/penjualan',  [PesananController::class, 'historyPenjualan']);
 });
 
 // ─── Admin routes ─────────────────────────────────────────────────────────────
