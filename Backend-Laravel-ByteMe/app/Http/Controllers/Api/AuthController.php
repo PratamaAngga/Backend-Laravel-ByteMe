@@ -85,7 +85,23 @@ class AuthController extends Controller
             ], $httpCode);
         }
 
-        if (in_array($user->status, ['banned', 'suspended'])) {
+        // Cek suspended
+        if ($user->status === 'suspended') {
+            if ($user->suspended_until && now()->gt($user->suspended_until)) {
+                // Masa suspend habis, otomatis aktifkan lagi
+                $user->status = 'active';
+                $user->suspended_until = null;
+                $user->save();
+            } else {
+                $sisaHari = now()->diffInDays($user->suspended_until, false);
+                return response()->json([
+                    'message' => "Akun kamu disuspend. Bisa login lagi dalam {$sisaHari} hari.",
+                    'suspended_until' => $user->suspended_until,
+                ], 403);
+            }
+        }
+
+        if (in_array($user->status, ['banned'])) {
             return response()->json([
                 'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
             ], 403);
