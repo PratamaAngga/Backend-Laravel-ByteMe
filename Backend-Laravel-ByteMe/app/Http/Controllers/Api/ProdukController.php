@@ -19,22 +19,17 @@ class ProdukController extends Controller
         $this->storage = $storage;
     }
 
-    // 1. List semua produk yang sudah approved (untuk marketplace / explore pembeli)
+    // 1. List semua produk approved (Halaman Marketplace Pembeli)
     public function index()
     {
         $produkTable = (new Produk())->getTable();
 
-        $produk = Produk::with('categories')
+        // 🌟 FIX URUTAN: select() ditaruh di paling atas agar tidak menghapus fungsi withAvg/withCount
+        $produk = Produk::select($produkTable . '.*')
+            ->with('categories')
             ->withAvg('reviews', 'rating')  
             ->withCount('reviews')          
-            ->select($produkTable . '.*')
-            // 🌟 PERBAIKAN BACKEND: Menambahkan hitungan total terjual ke halaman utama marketplace
-            ->addSelect([
-                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
-                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
-                    ->whereColumn('produk_id', $produkTable . '.produk_id')
-                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement']) // Kebal huruf kapital & status Midtrans
-            ])
+            ->selectRaw("(SELECT COALESCE(SUM(qty_terjual), 0) FROM v_riwayat_penjualan_produk_v2 WHERE v_riwayat_penjualan_produk_v2.produk_id = {$produkTable}.produk_id AND LOWER(status_pembayaran) IN ('success', 'paid', 'settlement')) as qty_terjual")
             ->where('status', 'approved')
             ->latest()
             ->get();
@@ -42,22 +37,17 @@ class ProdukController extends Controller
         return response()->json($produk);
     }
 
-    // 2. Detail satu produk (saat pembeli klik produk)
+    // 2. Detail satu produk (Saat diklik oleh pembeli)
     public function show(string $id)
     {
         $produkTable = (new Produk())->getTable();
 
-        $produk = Produk::with('categories')
+        // 🌟 FIX URUTAN: select() ditaruh di paling atas
+        $produk = Produk::select($produkTable . '.*')
+            ->with('categories')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->select($produkTable . '.*')
-            // 🌟 PERBAIKAN BACKEND: Menambahkan hitungan total terjual ke halaman detail produk
-            ->addSelect([
-                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
-                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
-                    ->whereColumn('produk_id', $produkTable . '.produk_id')
-                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement'])
-            ])
+            ->selectRaw("(SELECT COALESCE(SUM(qty_terjual), 0) FROM v_riwayat_penjualan_produk_v2 WHERE v_riwayat_penjualan_produk_v2.produk_id = {$produkTable}.produk_id AND LOWER(status_pembayaran) IN ('success', 'paid', 'settlement')) as qty_terjual")
             ->where('produk_id', $id)
             ->where('status', 'approved')
             ->first();
@@ -90,7 +80,6 @@ class ProdukController extends Controller
             return response()->json(['message' => 'Hanya penjual yang bisa upload produk'], 403);
         }
 
-        // Upload file ke Supabase Storage
         $file     = $request->file('file');
         $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
         $filePath = $file->getRealPath();
@@ -150,7 +139,6 @@ class ProdukController extends Controller
             'kategori.*' => 'string|exists:kategori,id',
         ]);
 
-        // Kalau ada file baru, upload dan hapus yang lama
         if ($request->hasFile('file')) {
             $oldFileName = basename($produk->file_path);
             $this->storage->delete($oldFileName);
@@ -205,20 +193,17 @@ class ProdukController extends Controller
         return response()->json(['message' => 'Produk berhasil dihapus']);
     }
 
-    // 3. List produk milik seller yang sedang login
+    // 3. List produk milik seller yang sedang login (Halaman Dashboard Seller)
     public function myProduk(Request $request)
     {
         $produkTable = (new Produk())->getTable();
 
-        // 🌟 PERBAIKAN BACKEND: Menambahkan fungsi LOWER() agar kebal Case-Sensitive PostgreSQL
-        $produk = Produk::with('categories')
-            ->select($produkTable . '.*')
-            ->addSelect([
-                'qty_terjual' => DB::table('v_riwayat_penjualan_produk_v2')
-                    ->selectRaw('COALESCE(SUM(qty_terjual), 0)')
-                    ->whereColumn('v_riwayat_penjualan_produk_v2.produk_id', $produkTable . '.produk_id')
-                    ->whereIn(DB::raw('LOWER(status_pembayaran)'), ['success', 'paid', 'settlement']) 
-            ])
+        // 🌟 FIX URUTAN UTAMANYA DI SINI: select() wajib dipanggil duluan!
+        $produk = Produk::select($produkTable . '.*')
+            ->with('categories')
+            ->withAvg('reviews', 'rating')  
+            ->withCount('reviews')          
+            ->selectRaw("(SELECT COALESCE(SUM(qty_terjual), 0) FROM v_riwayat_penjualan_produk_v2 WHERE v_riwayat_penjualan_produk_v2.produk_id = {$produkTable}.produk_id AND LOWER(status_pembayaran) IN ('success', 'paid', 'settlement')) as qty_terjual")
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
