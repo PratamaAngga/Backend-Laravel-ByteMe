@@ -25,7 +25,10 @@ class KeranjangController extends Controller
         }
 
         $items = DetailKeranjang::where('keranjang_id', $keranjang->keranjang_id)
-            ->with(['produk:produk_id,nama_produk,harga,file_path'])
+            ->with(['produk' => function ($query) {
+                $query->select('produk_id', 'nama_produk', 'harga', 'file_path', 'user_id')
+                    ->with(['user:id,username']); // ← ambil username seller
+            }])
             ->get();
 
         return response()->json([
