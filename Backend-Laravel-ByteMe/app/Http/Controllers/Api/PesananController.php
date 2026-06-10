@@ -115,6 +115,9 @@ class PesananController extends Controller
                     'email'      => $user->email,
                 ],
                 'item_details' => $itemDetails,
+                'callbacks' => [
+                    'finish' => 'https://backend-laravel-byteme-production.up.railway.app/payment/finish',
+                ],
             ];
 
             $midtransResponse = $this->midtrans->createTransaction($midtransParams);

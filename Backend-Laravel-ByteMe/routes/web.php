@@ -40,3 +40,19 @@ Route::prefix('admin')->group(function () {
         Route::patch('/profile', [AdminWebController::class, 'updateProfile'])->name('admin.profile.update');
     });
 });
+
+// Payment redirect routes
+Route::get('/payment/finish', function () {
+    $query = http_build_query(request()->all());
+    return redirect()->away('byteme://payment/finish?' . $query);
+});
+
+Route::get('/payment/unfinish', function () {
+    $query = http_build_query(request()->all());
+    return redirect()->away('byteme://payment/unfinish?' . $query);
+});
+
+Route::get('/payment/error', function () {
+    $query = http_build_query(request()->all());
+    return redirect()->away('byteme://payment/error?' . $query);
+});
