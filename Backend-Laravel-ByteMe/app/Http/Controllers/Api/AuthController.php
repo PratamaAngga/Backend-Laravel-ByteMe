@@ -88,14 +88,14 @@ class AuthController extends Controller
         // Cek suspended
         if ($user->status === 'suspended') {
             if ($user->suspended_until && now()->gt($user->suspended_until)) {
-                // Masa suspend habis, otomatis aktifkan lagi
+                // Masa suspend habis, aktifkan lagi otomatis
                 $user->status = 'active';
                 $user->suspended_until = null;
                 $user->save();
             } else {
-                $sisaHari = now()->diffInDays($user->suspended_until, false);
+                $sisaHari = now()->diffInDays($user->suspended_until);
                 return response()->json([
-                    'message' => "Akun kamu disuspend. Bisa login lagi dalam {$sisaHari} hari.",
+                    'message'         => "Akunmu disuspend. Bisa login lagi dalam {$sisaHari} hari.",
                     'suspended_until' => $user->suspended_until,
                 ], 403);
             }

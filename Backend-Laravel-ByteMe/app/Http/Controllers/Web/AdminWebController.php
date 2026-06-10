@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Services\SupabaseStorageService;
+use App\Helpers\NotifikasiHelper;
 
 class AdminWebController extends Controller
 {
@@ -78,7 +79,12 @@ class AdminWebController extends Controller
         $produk = Produk::findOrFail($id);
         $produk->status = 'approved';
         $produk->save();
-
+        // Approve
+        NotifikasiHelper::kirim(
+            userId:  $produk->user_id,
+            type:    'produk',
+            catatan: '✅ Produk "' . $produk->nama_produk . '" telah disetujui dan sekarang tampil di marketplace.',
+        );
         return back()->with('success', 'Product approved successfully.');
     }
 
@@ -90,7 +96,12 @@ class AdminWebController extends Controller
         $produk = Produk::findOrFail($id);
         $produk->status = 'rejected';
         $produk->save();
-
+        // Reject
+        NotifikasiHelper::kirim(
+            userId:  $produk->user_id,
+            type:    'produk',
+            catatan: '❌ Produk "' . $produk->nama_produk . '" ditolak. Alasan: ' . $request->alasan,
+        );
         return back()->with('success', 'Product rejected successfully.');
     }
 
@@ -160,29 +171,71 @@ class AdminWebController extends Controller
         return redirect()->route('admin.categories')->with('success', 'Category deleted successfully.');
     }
 
-    // Ban user
-    public function banUser($id)
+    public function banUser(Request $request, $id)
     {
+        $request->validate([
+            'type'   => 'required|in:warning,suspended,banned',
+            'alasan' => 'required|string',
+        ]);
+
         $user = User::findOrFail($id);
 
         if ($user->role === 'admin') {
-            return back()->with('error', 'Admin accounts cannot be banned.');
+            return back()->with('error', 'Admin tidak bisa dibanned');
         }
 
-        $user->status = 'banned';
+        if ($user->status === 'banned') {
+            return back()->with('error', 'User sudah dalam status banned');
+        }
+
+        $user->status = $request->type;
+
+        if ($request->type === 'suspended') {
+            $user->suspended_until = now()->addDays(7);
+        } else {
+            $user->suspended_until = null;
+        }
+
         $user->save();
 
-        return back()->with('success', 'User banned successfully.');
+        if (in_array($request->type, ['suspended', 'banned'])) {
+            $user->tokens()->delete();
+        }
+
+        $pesanNotif = match($request->type) {
+            'warning'   => '⚠️ Akunmu mendapat peringatan dari admin. Alasan: ' . $request->alasan . '. Harap perhatikan ketentuan penggunaan.',
+            'suspended' => '🚫 Akunmu disuspend selama 7 hari hingga ' . now()->addDays(7)->format('d/m/Y') . '. Alasan: ' . $request->alasan,
+            'banned'    => '🚫 Akunmu telah dibanned secara permanen. Alasan: ' . $request->alasan . '. Hubungi admin jika ada keberatan.',
+        };
+
+        NotifikasiHelper::kirim(
+            userId:  $user->id,
+            type:    'sanksi',
+            catatan: $pesanNotif,
+        );
+
+        return back()->with('success', 'User berhasil di-' . $request->type);
     }
 
-    // Unban user
     public function unbanUser($id)
     {
         $user = User::findOrFail($id);
+
+        if ($user->status === 'active') {
+            return back()->with('error', 'User sudah dalam status active');
+        }
+
         $user->status = 'active';
+        $user->suspended_until = null;
         $user->save();
 
-        return back()->with('success', 'User unbanned successfully.');
+        NotifikasiHelper::kirim(
+            userId:  $user->id,
+            type:    'sanksi',
+            catatan: '✅ Sanksi pada akunmu telah dicabut oleh admin. Akunmu kembali aktif.',
+        );
+
+        return back()->with('success', 'Sanksi user berhasil dicabut');
     }
 
     protected SupabaseStorageService $storage;
@@ -226,7 +279,12 @@ class AdminWebController extends Controller
         $withdraw->status = 'handled';
         $withdraw->admin_note = 'Disetujui oleh admin';
         $withdraw->save();
-
+        // Approved
+        NotifikasiHelper::kirim(
+            userId:  $withdraw->user_id,
+            type:    'withdraw',
+            catatan: '💸 Request withdraw sebesar Rp ' . number_format($withdraw->amount, 0, ',', '.') . ' telah disetujui, mohon ditunggu untuk proses transfer.',
+        ); 
         return back()->with('success', 'Request withdraw disetujui, silakan transfer manual');
     }
 
@@ -287,7 +345,12 @@ class AdminWebController extends Controller
         $withdraw->status     = 'rejected';
         $withdraw->admin_note = $request->alasan;
         $withdraw->save();
-
+        // Rejected
+        NotifikasiHelper::kirim(
+            userId:  $withdraw->user_id,
+            type:    'withdraw',
+            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->alasan . '. Saldo telah dikembalikan.',
+        );
         return back()->with('success', 'Request withdraw direject dan saldo dikembalikan');
     }
 

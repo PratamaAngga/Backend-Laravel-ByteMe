@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\KategoriController;   // ← tambah import
 use App\Http\Controllers\Api\EmailLogController;   // ← tambah import
 use App\Models\Kategori;
 use App\Models\EmailLog;
+use App\Http\Controllers\Api\NotifikasiController;
 
 // ─── Public routes ────────────────────────────────────────────────────────────
 Route::prefix('auth')->middleware('cors')->group(function () {
@@ -78,6 +79,11 @@ Route::middleware(['auth:sanctum', 'cors'])->group(function () {
 
     Route::get('/history/pembelian',  [PesananController::class, 'historyPembelian']);
     Route::get('/history/penjualan',  [PesananController::class, 'historyPenjualan']);
+
+    Route::get('/notifikasi',                          [NotifikasiController::class, 'index']);
+    Route::patch('/notifikasi/{id}/read',              [NotifikasiController::class, 'markAsRead']);
+    Route::patch('/notifikasi/read-all',               [NotifikasiController::class, 'markAllAsRead']);
+    Route::delete('/notifikasi/{id}',                  [NotifikasiController::class, 'destroy']);
 });
 
 // ─── Admin routes ─────────────────────────────────────────────────────────────

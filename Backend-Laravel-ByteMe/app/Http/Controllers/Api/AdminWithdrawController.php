@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WithdrawRequest;
 use Illuminate\Http\Request;
+use App\Helpers\NotifikasiHelper;
 
 class AdminWithdrawController extends Controller
 {
@@ -51,7 +52,12 @@ class AdminWithdrawController extends Controller
         $withdraw->status     = 'approved';
         $withdraw->admin_note = $request->admin_note;
         $withdraw->save();
-
+        // Approved
+        NotifikasiHelper::kirim(
+            userId:  $withdraw->user_id,
+            type:    'withdraw',
+            catatan: '💸 Request withdraw sebesar Rp ' . number_format($withdraw->amount, 0, ',', '.') . ' telah disetujui, mohon ditunggu untuk proses transfer.',
+        ); 
         return response()->json([
             'message'  => 'Withdraw request berhasil diapprove',
             'withdraw' => $withdraw->load('user:id,username,email'),
@@ -80,7 +86,12 @@ class AdminWithdrawController extends Controller
         $withdraw->status     = 'rejected';
         $withdraw->admin_note = $request->admin_note;
         $withdraw->save();
-
+        // Rejected
+        NotifikasiHelper::kirim(
+            userId:  $withdraw->user_id,
+            type:    'withdraw',
+            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->alasan . '. Saldo telah dikembalikan.',
+        );
         return response()->json([
             'message'  => 'Withdraw request berhasil direject',
             'withdraw' => $withdraw->load('user:id,username,email'),
