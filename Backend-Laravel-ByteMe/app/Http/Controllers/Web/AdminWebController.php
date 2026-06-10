@@ -249,7 +249,7 @@ class AdminWebController extends Controller
     public function withdraws()
     {
         $withdraws = WithdrawRequest::with('user')
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'handled'])
             ->latest()
             ->paginate(10);
 
@@ -305,12 +305,14 @@ class AdminWebController extends Controller
         $file     = $request->file('receipt_file');
         $fileName = 'receipt_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
 
-        $uploadedUrl = $this->storage->uploadToBucket(
-            $file->getRealPath(),
-            $fileName,
-            $file->getMimeType(),
-            'transfer_receipt'
-        );
+        // Pakai useBucket() sesuai versi terbaru SupabaseStorageService
+        $uploadedUrl = $this->storage
+            ->useBucket('transfer_receipt_bucket')
+            ->upload(
+                $file->getRealPath(),
+                $fileName,
+                $file->getMimeType()
+            );
 
         if (!$uploadedUrl) {
             return back()->with('error', 'Gagal mengupload bukti transfer');
@@ -320,6 +322,13 @@ class AdminWebController extends Controller
         $withdraw->status       = 'success';
         $withdraw->admin_note   = $request->admin_note ?? $withdraw->admin_note;
         $withdraw->save();
+
+        // Notif ke seller
+        NotifikasiHelper::kirim(
+            userId:  $withdraw->user_id,
+            type:    'withdraw',
+            catatan: '✅ Dana withdraw sebesar Rp ' . number_format($withdraw->amount, 0, ',', '.') . ' telah ditransfer! Bukti transfer tersedia di riwayat withdraw.',
+        );
 
         return back()->with('success', 'Bukti transfer berhasil diupload, withdraw selesai');
     }

@@ -38,6 +38,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/withdraws/{id}/receipt',   [AdminWebController::class, 'uploadReceipt'])->name('admin.withdraws.receipt');
         Route::get('/profile', [AdminWebController::class, 'profile'])->name('admin.profile');
         Route::patch('/profile', [AdminWebController::class, 'updateProfile'])->name('admin.profile.update');
+        Route::post('/withdraws/{id}/receipt', [AdminWebController::class, 'uploadReceipt'])->name('admin.withdraws.receipt');
     });
 });
 
