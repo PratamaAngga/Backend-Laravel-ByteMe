@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Produk;
 use Illuminate\Http\Request;
+use App\Helpers\NotifikasiHelper;
 
 class AdminProdukController extends Controller
 {
@@ -37,6 +38,13 @@ class AdminProdukController extends Controller
         $produk->status = 'approved';
         $produk->save();
 
+        // Approve
+        NotifikasiHelper::kirim(
+            userId:  $produk->user_id,
+            type:    'produk',
+            catatan: '✅ Produk "' . $produk->nama_produk . '" telah disetujui dan sekarang tampil di marketplace.',
+        );
+
         return response()->json([
             'message' => 'Produk berhasil diapprove',
             'produk'  => $produk,
@@ -60,7 +68,13 @@ class AdminProdukController extends Controller
         $produk->save();
 
         // Nanti bisa ditambah notifikasi ke seller di sini
-
+        // Reject
+        NotifikasiHelper::kirim(
+            userId:  $produk->user_id,
+            type:    'produk',
+            catatan: '❌ Produk "' . $produk->nama_produk . '" ditolak. Alasan: ' . $request->alasan,
+        );
+        
         return response()->json([
             'message' => 'Produk berhasil direject',
             'alasan'  => $request->alasan,

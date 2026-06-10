@@ -28,6 +28,7 @@ class User extends Authenticatable
         'status',
         'balance',
         'profile_image',
+        'suspended_until',
     ];
 
     protected $hidden = [

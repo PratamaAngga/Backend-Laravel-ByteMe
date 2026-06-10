@@ -10,10 +10,16 @@ class Notifikasi extends Model
     protected $primaryKey = 'notif_id';
     public $incrementing = false;
     protected $keyType = 'string';
+    const UPDATED_AT = null;
     public $timestamps = false;
 
     protected $fillable = [
-        'notif_id', 'user_id', 'sanksi_id',
-        'review_id', 'catatan', 'status',
+        'notif_id',
+        'user_id',
+        'sanksi_id',
+        'review_id',
+        'type',
+        'catatan',
+        'status',
     ];
 }

@@ -17,6 +17,7 @@ use App\Mail\ProdukAccessMail;
 use App\Models\EmailLog;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\NotifikasiHelper;
 
 class PesananController extends Controller
 {
@@ -228,6 +229,13 @@ class PesananController extends Controller
             $this->kreditSaldoSeller($pesanan); // ← tambahkan ini
         }
 
+        // Notif ke buyer
+        NotifikasiHelper::kirim(
+            userId:  $pesanan->user_id,
+            type:    'pembayaran',
+            catatan: '🎉 Pembayaran pesanan #' . substr($pesanan->pesanan_id, 0, 8) . ' berhasil! Cek email untuk link akses produk.',
+        );
+        
         return response()->json(['message' => 'Webhook berhasil diproses']);
     }
 
