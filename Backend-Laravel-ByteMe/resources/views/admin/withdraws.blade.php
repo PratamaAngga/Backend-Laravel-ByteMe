@@ -167,7 +167,7 @@
                                     </p>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Alasan Penolakan</label>
-                                        <textarea class="form-control rounded-3" name="alasan" rows="3"
+                                        <textarea class="form-control rounded-3" name="admin_note" rows="3"
                                             placeholder="Tulis alasan penolakan..." required></textarea>
                                     </div>
                                 </div>
