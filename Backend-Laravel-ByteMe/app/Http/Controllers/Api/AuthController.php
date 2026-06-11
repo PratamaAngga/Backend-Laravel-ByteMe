@@ -60,15 +60,18 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // ✅ MEMASTIKAN TIPE DATA BALANCE DI-KONVERSI KE ANGKA (DOUBLE) SEBELUM DIKIRIM KE FLUTTER
         $user->balance = (double)($user->balance ?? 0.0);
 
+        // 🌟 AMBIL ALASAN DINAMIS DARI DATABASE (FALLBACK KE TEKS DEFAULT JIKA KOSONG)
+        $reason = $user->status_reason ?? 'Harap hubungi pihak administrasi.';
+
         $statusMessages = [
-            'warning'   => 'Akun kamu sedang dalam status peringatan. Harap perhatikan ketentuan penggunaan.',
-            'suspended' => 'Akun kamu sedang disuspend sementara. Hubungi admin untuk informasi lebih lanjut.',
-            'banned'    => 'Akun kamu telah dibanned secara permanen. Hubungi admin jika ada keberatan.',
+            'warning'   => "Akun kamu sedang dalam status peringatan. Alasan: {$reason}",
+            'suspended' => "Akun kamu sedang disuspend sementara. Alasan: {$reason}",
+            'banned'    => "Akun kamu telah dibanned secara permanen. Alasan: {$reason}",
         ];
 
+        // Memeriksa status user untuk mengembalikan response sanksi
         if (array_key_exists($user->status, $statusMessages)) {
             $httpCode = $user->status === 'warning' ? 200 : 403;
 
@@ -78,24 +81,25 @@ class AuthController extends Controller
             }
 
             return response()->json([
-                'message' => $statusMessages[$user->status],
+                'message' => $statusMessages[$user->status], // 🌟 Pesan di Flutter akan langsung mengandung Alasan ini!
                 'status'  => $user->status,
                 'token'   => $token,
                 'user'    => $user,
             ], $httpCode);
         }
 
-        // Cek suspended
+        // Cek suspended otomatis jika masa suspend habis
         if ($user->status === 'suspended') {
             if ($user->suspended_until && now()->gt($user->suspended_until)) {
                 // Masa suspend habis, aktifkan lagi otomatis
                 $user->status = 'active';
                 $user->suspended_until = null;
+                $user->status_reason = null; // Bersihkan alasan
                 $user->save();
             } else {
                 $sisaHari = now()->diffInDays($user->suspended_until);
                 return response()->json([
-                    'message'         => "Akunmu disuspend. Bisa login lagi dalam {$sisaHari} hari.",
+                    'message'         => "Akunmu disuspend. Alasan: {$reason}. Bisa login lagi dalam {$sisaHari} hari.",
                     'suspended_until' => $user->suspended_until,
                 ], 403);
             }
@@ -103,7 +107,7 @@ class AuthController extends Controller
 
         if (in_array($user->status, ['banned'])) {
             return response()->json([
-                'message' => 'Akun Anda telah diblokir. Hubungi admin untuk informasi lebih lanjut.',
+                'message' => "Akun Anda telah diblokir. Alasan: {$reason}",
             ], 403);
         }
 
