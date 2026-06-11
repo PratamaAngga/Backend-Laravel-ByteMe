@@ -32,4 +32,9 @@ class Produk extends Model
     {
         return $this->hasMany(Review::class, 'produk_id', 'produk_id');
     }
+
+    public function peninjauan()
+    {
+        return $this->hasMany(Peninjauan::class, 'produk_id', 'produk_id');
+    }
 }

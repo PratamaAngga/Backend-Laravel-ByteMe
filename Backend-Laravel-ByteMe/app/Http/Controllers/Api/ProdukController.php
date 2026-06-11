@@ -27,7 +27,6 @@ class ProdukController extends Controller
         // 🌟 FIX URUTAN: select() ditaruh di paling atas agar tidak menghapus fungsi withAvg/withCount
         $produk = Produk::select($produkTable . '.*')
             ->with('categories')
-            ->with('peninjauan')
             ->withAvg('reviews', 'rating')  
             ->withCount('reviews')          
             ->selectRaw("(SELECT COALESCE(SUM(qty_terjual), 0) FROM v_riwayat_penjualan_produk_v2 WHERE v_riwayat_penjualan_produk_v2.produk_id = {$produkTable}.produk_id AND LOWER(status_pembayaran) IN ('success', 'paid', 'settlement')) as qty_terjual")
@@ -202,6 +201,7 @@ class ProdukController extends Controller
         // 🌟 FIX URUTAN UTAMANYA DI SINI: select() wajib dipanggil duluan!
         $produk = Produk::select($produkTable . '.*')
             ->with('categories')
+            ->with('peninjauan')
             ->withAvg('reviews', 'rating')  
             ->withCount('reviews')          
             ->selectRaw("(SELECT COALESCE(SUM(qty_terjual), 0) FROM v_riwayat_penjualan_produk_v2 WHERE v_riwayat_penjualan_produk_v2.produk_id = {$produkTable}.produk_id AND LOWER(status_pembayaran) IN ('success', 'paid', 'settlement')) as qty_terjual")
