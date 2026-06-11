@@ -200,7 +200,9 @@ public function rejectProduk(Request $request, $id)
             return back()->with('error', 'User sudah dalam status banned');
         }
 
+        // Simpan sanksi dan alasannya ke database!
         $user->status = $request->type;
+        $user->status_reason = $request->alasan;
 
         if ($request->type === 'suspended') {
             $user->suspended_until = now()->addDays(7);
@@ -229,6 +231,7 @@ public function rejectProduk(Request $request, $id)
         return back()->with('success', 'User berhasil di-' . $request->type);
     }
 
+    // Cabut sanksi via Web Admin
     public function unbanUser($id)
     {
         $user = User::findOrFail($id);
@@ -239,6 +242,7 @@ public function rejectProduk(Request $request, $id)
 
         $user->status = 'active';
         $user->suspended_until = null;
+        $user->status_reason = null; // 🌟 BERSIHKAN JUGA ALASANNYA SAAT DICABUT SANKSI
         $user->save();
 
         NotifikasiHelper::kirim(

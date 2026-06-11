@@ -14,7 +14,7 @@ class AdminUserController extends Controller
     {
         $users = User::where('role', '!=', 'admin')
             ->latest()
-            ->get(['id', 'username', 'email', 'role', 'status', 'created_at']);
+            ->get(['id', 'username', 'email', 'role', 'status', 'created_at', 'status_reason']);
 
         return response()->json($users);
     }
@@ -24,7 +24,7 @@ class AdminUserController extends Controller
     {
         $user = User::where('id', $id)
             ->where('role', '!=', 'admin')
-            ->first(['id', 'username', 'email', 'role', 'status', 'created_at']);
+            ->first(['id', 'username', 'email', 'role', 'status', 'created_at', 'status_reason']);
 
         if (!$user) {
             return response()->json(['message' => 'User tidak ditemukan'], 404);
@@ -53,7 +53,9 @@ class AdminUserController extends Controller
             return response()->json(['message' => 'User sudah dalam status banned'], 409);
         }
 
+        // Simpan status dan alasannya ke database!
         $user->status = $request->type;
+        $user->status_reason = $request->alasan; // 🌟 SEKARANG ALASANNYA DISIMPAN DI SINI
 
         // Kalau suspended, set waktu berakhirnya
         if ($request->type === 'suspended') {
@@ -65,7 +67,6 @@ class AdminUserController extends Controller
         $user->save();
 
         // Hapus semua token aktif biar langsung logout
-        // Warning masih bisa login, jadi jangan hapus tokennya
         if (in_array($request->type, ['suspended', 'banned'])) {
             $user->tokens()->delete();
         }
@@ -85,7 +86,7 @@ class AdminUserController extends Controller
 
         return response()->json([
             'message' => 'Akun user berhasil di-' . $request->type,
-            'user'    => $user->only(['id', 'username', 'email', 'role', 'status', 'suspended_until']),
+            'user'    => $user->only(['id', 'username', 'email', 'role', 'status', 'suspended_until', 'status_reason']),
         ]);
     }
 
@@ -106,6 +107,7 @@ class AdminUserController extends Controller
 
         $user->status = 'active';
         $user->suspended_until = null;
+        $user->status_reason = null; // 🌟 BERSIHKAN JUGA ALASANNYA SAAT DICABUT SANKSI
         $user->save();
 
         NotifikasiHelper::kirim(
