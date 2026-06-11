@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -62,16 +63,33 @@ class AuthController extends Controller
 
         $user->balance = (double)($user->balance ?? 0.0);
 
-        // 🌟 AMBIL ALASAN DINAMIS DARI DATABASE (FALLBACK KE TEKS DEFAULT JIKA KOSONG)
-        $reason = $user->status_reason ?? 'Harap hubungi pihak administrasi.';
+        // 1. 🌟 CEK APAKAH MASA SUSPEND SUDAH HABIS (DILAKUKAN DI AWAL SEBELUM INTERSEPSI STATUS)
+        if ($user->status === 'suspended') {
+            if ($user->suspended_until && now()->gt($user->suspended_until)) {
+                // Masa suspend habis, aktifkan lagi otomatis di database
+                $user->status = 'active';
+                $user->suspended_until = null;
+                $user->status_reason = null; // Bersihkan alasan
+                $user->save();
+            }
+        }
 
+        // 2. AMBIL ALASAN DAN FORMAT TANGGAL SELESAI SUSPEND SECARA DINAMIS
+        $reason = $user->status_reason ?? 'Harap hubungi pihak administrasi.';
+        
+        // Format tanggal suspend_until ke waktu lokal (WIB / Asia/Jakarta) agar rapi dibaca manusia
+        $suspendedUntilFormatted = $user->suspended_until 
+            ? Carbon::parse($user->suspended_until)->timezone('Asia/Jakarta')->format('d/m/Y H:i') 
+            : null;
+
+        // Siapkan pesan sanksi kustom
         $statusMessages = [
             'warning'   => "Akun kamu sedang dalam status peringatan. Alasan: {$reason}",
-            'suspended' => "Akun kamu sedang disuspend sementara. Alasan: {$reason}",
+            'suspended' => "Akun kamu sedang disuspend sementara" . ($suspendedUntilFormatted ? " hingga {$suspendedUntilFormatted} WIB" : "") . ". Alasan: {$reason}",
             'banned'    => "Akun kamu telah dibanned secara permanen. Alasan: {$reason}",
         ];
 
-        // Memeriksa status user untuk mengembalikan response sanksi
+        // 3. MEMERIKSA STATUS USER UNTUK MENGEMBALIKAN RESPONSE SANKSI (JIKA MASIH TERDAMPAK SANKSI)
         if (array_key_exists($user->status, $statusMessages)) {
             $httpCode = $user->status === 'warning' ? 200 : 403;
 
@@ -81,36 +99,15 @@ class AuthController extends Controller
             }
 
             return response()->json([
-                'message' => $statusMessages[$user->status], // 🌟 Pesan di Flutter akan langsung mengandung Alasan ini!
-                'status'  => $user->status,
-                'token'   => $token,
-                'user'    => $user,
+                'message'         => $statusMessages[$user->status], // Pesan ini sudah dinamis berisi Alasan + Tanggal Selesai!
+                'status'          => $user->status,
+                'suspended_until' => $user->suspended_until, // Raw datetime jika Flutter butuh parsing kalkulasi hari
+                'token'           => $token,
+                'user'            => $user,
             ], $httpCode);
         }
 
-        // Cek suspended otomatis jika masa suspend habis
-        if ($user->status === 'suspended') {
-            if ($user->suspended_until && now()->gt($user->suspended_until)) {
-                // Masa suspend habis, aktifkan lagi otomatis
-                $user->status = 'active';
-                $user->suspended_until = null;
-                $user->status_reason = null; // Bersihkan alasan
-                $user->save();
-            } else {
-                $sisaHari = now()->diffInDays($user->suspended_until);
-                return response()->json([
-                    'message'         => "Akunmu disuspend. Alasan: {$reason}. Bisa login lagi dalam {$sisaHari} hari.",
-                    'suspended_until' => $user->suspended_until,
-                ], 403);
-            }
-        }
-
-        if (in_array($user->status, ['banned'])) {
-            return response()->json([
-                'message' => "Akun Anda telah diblokir. Alasan: {$reason}",
-            ], 403);
-        }
-
+        // Jika lolos semua pemeriksaan sanksi, izinkan login normal
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
