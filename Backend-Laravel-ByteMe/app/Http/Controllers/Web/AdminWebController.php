@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use App\Services\SupabaseStorageService;
 use App\Helpers\NotifikasiHelper;
 
+
 class AdminWebController extends Controller
 {
     // Login form
@@ -89,22 +90,33 @@ class AdminWebController extends Controller
     }
 
     // Reject produk
-    public function rejectProduk(Request $request, $id)
-    {
-        $request->validate(['alasan' => 'required|string']);
+public function rejectProduk(Request $request, $id)
+{
+    // 1. Validasi input
+    $request->validate(['alasan' => 'required|string']);
 
-        $produk = Produk::findOrFail($id);
-        $produk->status = 'rejected';
-        $produk->save();
-        // Reject
-        NotifikasiHelper::kirim(
-            userId:  $produk->user_id,
-            type:    'produk',
-            catatan: '❌ Produk "' . $produk->nama_produk . '" ditolak. Alasan: ' . $request->alasan,
-        );
-        return back()->with('success', 'Product rejected successfully.');
-    }
+    // 2. Cari produk dan ubah statusnya
+    $produk = Produk::findOrFail($id);
+    $produk->status = 'nonaktif';
+    $produk->save();
 
+    // 3. Simpan alasan penolakan ke tabel peninjauan
+    \App\Models\Peninjauan::create([
+        'produk_id' => $produk->produk_id, 
+        'user_id'   => $produk->user_id,
+        'catatan'    => $request->alasan,   
+    ]);
+    
+    // 4. Reject Notifikasi
+    NotifikasiHelper::kirim(
+        userId:  $produk->user_id,
+        type:    'produk',
+        catatan: '❌ Produk "' . $produk->nama_produk . '" ditolak. Alasan: ' . $request->alasan,
+    );
+
+    // 5. Redirect kembali dengan pesan sukses
+    return back()->with('success', 'Product rejected successfully.');
+}
     // List users
     public function users()
     {
