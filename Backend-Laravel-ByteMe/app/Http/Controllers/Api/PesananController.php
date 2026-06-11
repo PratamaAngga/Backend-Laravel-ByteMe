@@ -329,13 +329,42 @@ class PesananController extends Controller
     // History pembelian buyer
     public function historyPembelian(Request $request)
     {
-        $history = VHistoryPembelian::where('buyer_id', $request->user()->id)
+        $userId = $request->user()->id;
+
+        $history = VHistoryPembelian::where('buyer_id', $userId)
             ->orderByDesc('tgl_pesanan')
             ->get();
 
+        // Ambil semua review milik user ini, di-index by produk_id
+        $reviews = \App\Models\Review::where('user_id', $userId)
+            ->get()
+            ->keyBy('produk_id');
+
+        $data = $history->map(function ($item) use ($reviews) {
+            $row = $item->toArray();
+
+            // Cari produk_id dari berbagai kemungkinan nama kolom di view
+            $produkId = $row['produk_id']
+                ?? $row['product_id']
+                ?? null;
+
+            $review = $produkId ? $reviews->get($produkId) : null;
+
+            // Paksa override kolom rating & komentar dari tabel review
+            // (view mungkin tidak include kolom ini sama sekali)
+            $row['produk_id']   = $produkId;
+            $row['rating']      = $review ? (int) $review->rating   : null;
+            $row['komentar']    = $review ? $review->komentar        : null;
+            $row['review_text'] = $review ? $review->komentar        : null;
+            $row['bintang']     = $review ? (int) $review->rating    : null;
+            $row['tgl_review']  = $review ? (string) $review->tgl_review : null;
+
+            return $row;
+        });
+
         return response()->json([
             'message' => 'History pembelian berhasil diambil',
-            'data'    => $history,
+            'data'    => $data,
         ]);
     }
 
