@@ -206,6 +206,8 @@ class PesananController extends Controller
         $transactionStatus = $request->transaction_status;
         $fraudStatus       = $request->fraud_status;
 
+        $statusSebelumnya = $pesanan->status;
+
         if ($transactionStatus === 'capture' && $fraudStatus === 'accept') {
             $pesanan->status = 'paid';
         } elseif ($transactionStatus === 'settlement') {
@@ -226,19 +228,19 @@ class PesananController extends Controller
             $pembayaran->save();
         }
 
-        // Kirim email kalau pembayaran berhasil
-        if ($pesanan->status === 'paid') {
+        // ✅ HANYA kredit saldo jika status BARU saja berubah ke 'paid'
+        // Jika sebelumnya sudah 'paid', skip — artinya webhook duplikat
+        if ($pesanan->status === 'paid' && $statusSebelumnya !== 'paid') {
             $this->kirimEmailAksesProduk($pesanan);
-            $this->kreditSaldoSeller($pesanan); // ← tambahkan ini
+            $this->kreditSaldoSeller($pesanan);
+
+            NotifikasiHelper::kirim(
+                userId:  $pesanan->user_id,
+                type:    'pembayaran',
+                catatan: '🎉 Pembayaran pesanan #' . substr($pesanan->pesanan_id, 0, 8) . ' berhasil! Cek email untuk link akses produk.',
+            );
         }
 
-        // Notif ke buyer
-        NotifikasiHelper::kirim(
-            userId:  $pesanan->user_id,
-            type:    'pembayaran',
-            catatan: '🎉 Pembayaran pesanan #' . substr($pesanan->pesanan_id, 0, 8) . ' berhasil! Cek email untuk link akses produk.',
-        );
-        
         return response()->json(['message' => 'Webhook berhasil diproses']);
     }
 
