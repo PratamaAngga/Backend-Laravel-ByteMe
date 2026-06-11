@@ -83,15 +83,21 @@ class AdminWithdrawController extends Controller
             ], 409);
         }
 
+        // ← TAMBAH: kembalikan saldo seller
+        $user = $withdraw->user;
+        $user->balance += $withdraw->amount;
+        $user->save();
+
         $withdraw->status     = 'rejected';
         $withdraw->admin_note = $request->admin_note;
         $withdraw->save();
-        // Rejected
+
         NotifikasiHelper::kirim(
             userId:  $withdraw->user_id,
             type:    'withdraw',
-            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->alasan . '. Saldo telah dikembalikan.',
+            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->admin_note . '. Saldo telah dikembalikan.', // ← FIX
         );
+
         return response()->json([
             'message'  => 'Withdraw request berhasil direject',
             'withdraw' => $withdraw->load('user:id,username,email'),
