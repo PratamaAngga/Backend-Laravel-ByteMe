@@ -137,6 +137,92 @@
             <tbody>
                 @forelse($users as $user)
                 <tr>
+                    {{-- Modal Ban --}}
+                    @if($user->role !== 'admin' && $user->status !== 'banned')
+                    <div class="modal fade" id="banModal{{ $user->id }}" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="border-radius: 20px; border: none;">
+                                <div class="modal-header" style="border-bottom: 1px solid #F1F5F9; padding: 20px 24px;">
+                                    <h5 class="modal-title fw-bold" style="color: #2B3674;">
+                                        ⚠️ Ban User: {{ $user->username }}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form action="{{ route('admin.users.ban', $user->id) }}" method="POST">
+                                    @csrf
+                                    @method('PATCH')
+                                    <div class="modal-body p-4">
+
+                                        {{-- Pilih Level Ban --}}
+                                        <div class="mb-4">
+                                            <label class="form-label fw-bold mb-3">Ban Level</label>
+                                            <div class="d-flex flex-column gap-2">
+
+                                                {{-- Warning --}}
+                                                <label class="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
+                                                    style="border: 1.5px solid #E2E8F0; cursor: pointer;"
+                                                    id="label-warning-{{ $user->id }}">
+                                                    <input type="radio" name="type" value="warning"
+                                                        class="mt-1 ban-radio-{{ $user->id }}"
+                                                        data-user="{{ $user->id }}"
+                                                        {{ $user->status === 'active' ? 'checked' : '' }}>
+                                                    <div>
+                                                        <div class="fw-bold" style="color: #F59E0B;">⚠️ Warning</div>
+                                                        <div class="text-muted small">User mendapat peringatan. Masih bisa login dan menggunakan aplikasi.</div>
+                                                    </div>
+                                                </label>
+
+                                                {{-- Suspended --}}
+                                                <label class="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
+                                                    style="border: 1.5px solid #E2E8F0; cursor: pointer;"
+                                                    id="label-suspended-{{ $user->id }}">
+                                                    <input type="radio" name="type" value="suspended"
+                                                        class="mt-1 ban-radio-{{ $user->id }}"
+                                                        data-user="{{ $user->id }}"
+                                                        {{ $user->status === 'suspended' ? 'checked' : '' }}>
+                                                    <div>
+                                                        <div class="fw-bold" style="color: #EF4444;">🚫 Suspended</div>
+                                                        <div class="text-muted small">User tidak bisa login selama 7 hari. Token aktif dihapus otomatis.</div>
+                                                    </div>
+                                                </label>
+
+                                                {{-- Banned --}}
+                                                <label class="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
+                                                    style="border: 1.5px solid #E2E8F0; cursor: pointer;"
+                                                    id="label-banned-{{ $user->id }}">
+                                                    <input type="radio" name="type" value="banned"
+                                                        class="mt-1 ban-radio-{{ $user->id }}"
+                                                        data-user="{{ $user->id }}">
+                                                    <div>
+                                                        <div class="fw-bold" style="color: #7F1D1D;">🔒 Banned Permanent</div>
+                                                        <div class="text-muted small">User tidak bisa login selamanya. Tindakan ini sangat serius.</div>
+                                                    </div>
+                                                </label>
+
+                                            </div>
+                                        </div>
+
+                                        {{-- Alasan --}}
+                                        <div>
+                                            <label class="form-label fw-bold">Alasan <span class="text-danger">*</span></label>
+                                            <textarea class="form-control rounded-3" name="alasan" rows="3"
+                                                placeholder="Tulis alasan pemberian sanksi..." required></textarea>
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer border-0 px-4 pb-4">
+                                        <button type="button" class="btn btn-light rounded-3 fw-bold px-4"
+                                            data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn fw-bold px-4 rounded-3"
+                                            style="background: #EF4444; color: white;">
+                                            Konfirmasi
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                     <td class="user-name">{{ $user->username }}</td>
                     <td style="color: #7B8AB8;">{{ $user->email }}</td>
                     <td>
@@ -153,15 +239,30 @@
                         </span>
                     </td>
                     <td style="color: #7B8AB8; font-size: 0.9rem;">{{ $user->created_at->format('d/m/Y') }}</td>
+                    {{-- Ganti bagian action column --}}
                     <td class="text-center">
                         @if($user->role === 'admin')
                             <button class="btn-disabled" disabled>Restricted</button>
-                        @elseif($user->status !== 'banned')
-                            <form action="{{ route('admin.users.ban', $user->id) }}" method="POST" class="m-0">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn-ban">Ban User</button>
-                            </form>
+                        @elseif($user->status === 'active' || $user->status === 'warning')
+                            {{-- Tombol Ban --}}
+                            <button type="button" class="btn-ban"
+                                data-bs-toggle="modal"
+                                data-bs-target="#banModal{{ $user->id }}">
+                                Ban User
+                            </button>
+                        @elseif($user->status === 'suspended')
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button type="button" class="btn-ban"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#banModal{{ $user->id }}">
+                                    Upgrade Ban
+                                </button>
+                                <form action="{{ route('admin.users.unban', $user->id) }}" method="POST" class="m-0">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn-unban">Unban</button>
+                                </form>
+                            </div>
                         @elseif($user->status === 'banned')
                             <form action="{{ route('admin.users.unban', $user->id) }}" method="POST" class="m-0">
                                 @csrf
@@ -192,4 +293,28 @@
 <div class="mt-4 d-flex justify-content-end">
     {{ $users->links('pagination::bootstrap-5') }}
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Highlight label radio yang dipilih
+    document.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            const userId = this.dataset.user;
+            // Reset semua label untuk user ini
+            document.querySelectorAll('.ban-radio-' + userId).forEach(function (r) {
+                r.closest('label').style.borderColor = '#E2E8F0';
+                r.closest('label').style.background = 'white';
+            });
+            // Highlight yang dipilih
+            this.closest('label').style.borderColor = '#6B7AFF';
+            this.closest('label').style.background = 'rgba(107, 122, 255, 0.05)';
+        });
+
+        // Trigger highlight untuk yang sudah checked saat load
+        if (radio.checked) {
+            radio.closest('label').style.borderColor = '#6B7AFF';
+            radio.closest('label').style.background = 'rgba(107, 122, 255, 0.05)';
+        }
+    });
+});
+</script>
 @endsection
