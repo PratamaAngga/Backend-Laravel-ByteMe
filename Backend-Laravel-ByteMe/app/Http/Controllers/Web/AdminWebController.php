@@ -348,9 +348,7 @@ public function rejectProduk(Request $request, $id)
     // Reject withdraw
     public function rejectWithdraw(Request $request, $id)
     {
-        $request->validate([
-            'alasan' => 'required|string',
-        ]);
+        $request->validate(['admin_note' => 'required|string']); // ← ganti 'alasan' → 'admin_note'
 
         $withdraw = WithdrawRequest::findOrFail($id);
 
@@ -358,20 +356,20 @@ public function rejectProduk(Request $request, $id)
             return back()->with('error', 'Request ini sudah diproses');
         }
 
-        // Kembalikan saldo seller
         $user = $withdraw->user;
         $user->balance += $withdraw->amount;
         $user->save();
 
         $withdraw->status     = 'rejected';
-        $withdraw->admin_note = $request->alasan;
+        $withdraw->admin_note = $request->admin_note; // ← ganti 'alasan' → 'admin_note'
         $withdraw->save();
-        // Rejected
+
         NotifikasiHelper::kirim(
             userId:  $withdraw->user_id,
             type:    'withdraw',
-            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->alasan . '. Saldo telah dikembalikan.',
+            catatan: '❌ Request withdraw ditolak. Alasan: ' . $request->admin_note . '. Saldo telah dikembalikan.', // ← ganti
         );
+
         return back()->with('success', 'Request withdraw direject dan saldo dikembalikan');
     }
 
