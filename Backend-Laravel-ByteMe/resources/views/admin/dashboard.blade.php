@@ -102,11 +102,10 @@
                 </div>
             </div>
             <div class="bg-white p-3 rounded-4 shadow-sm border px-4">
-                <p class="text-uppercase mb-1" style="font-size: 0.7rem; font-weight: 800; color: #8F9BBA; letter-spacing: 1.5px;">Security Status</p>
+                <p class="text-uppercase mb-1" style="font-size: 0.7rem; font-weight: 800; color: #8F9BBA; letter-spacing: 1.5px;">Platform Balance</p>
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width: 10px; height: 10px; border-radius: 50%; background: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>
-                    <span style="font-weight: 800; color: #2B3674; font-size: 1rem;">
-                        {{ ucfirst(Auth::user()->role ?? 'Admin') }}
+                    <span style="font-weight: 800; color: #10B981; font-size: 1rem;">
+                        Rp {{ number_format(Auth::user()->balance ?? 0, 0, ',', '.') }}
                     </span>
                 </div>
             </div>
